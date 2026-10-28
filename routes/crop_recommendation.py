@@ -1,12 +1,7 @@
-"""
-routes/crop_recommendation.py
------------------------------
-Crop recommendation using a Random Forest model.
-The model is auto-trained on first request if crop_model.pkl doesn't exist.
-"""
+"""Educational crop explorer built from synthetic examples, not field validation."""
 
-import os
-import pickle
+import math
+from functools import lru_cache
 import numpy as np
 from flask import Blueprint, render_template, request, current_app, flash, redirect, url_for
 from flask_login import login_required, current_user
@@ -40,28 +35,19 @@ CROP_TIPS = {
 }
 
 
+@lru_cache(maxsize=1)
 def _get_model():
-    """Load the crop model, training it first if pkl doesn't exist."""
-    model_path   = current_app.config['CROP_MODEL_PATH']
-    encoder_path = current_app.config['CROP_ENCODER_PATH']
+    """Build the deterministic demonstration model once per worker.
 
-    if not os.path.exists(model_path):
-        _train_and_save(model_path, encoder_path)
-
-    with open(model_path, 'rb') as f:
-        model = pickle.load(f)
-    with open(encoder_path, 'rb') as f:
-        encoder = pickle.load(f)
-    return model, encoder
-
-
-def _train_and_save(model_path, encoder_path):
-    """Generate synthetic training data and train a Random Forest."""
+    Synthetic examples cannot establish farm accuracy. Keep this small model in
+    memory instead of loading executable pickle files or racing to write a pair
+    of cache artifacts on the first requests.
+    """
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.preprocessing import LabelEncoder
     import pandas as pd
 
-    # Mean NPK / weather values for each crop (from agricultural references)
+    # Illustrative numeric cluster centers, not a validated agronomic dataset.
     CROPS = {
         'rice':        (80, 45, 40, 23, 82, 6.5, 200),
         'maize':       (77, 48, 20, 22, 65, 6.3, 85),
@@ -90,7 +76,7 @@ def _train_and_save(model_path, encoder_path):
     rng = np.random.default_rng(42)
     rows = []
     for crop, (N, P, K, T, H, pH, R) in CROPS.items():
-        # 200 synthetic samples per crop with realistic noise
+        # 200 synthetic examples per crop with deterministic noise
         n = 200
         rows.append(pd.DataFrame({
             'N':         rng.normal(N,   N*0.1,  n).clip(0),
@@ -109,57 +95,56 @@ def _train_and_save(model_path, encoder_path):
     y  = le.fit_transform(df['label'])
     X  = df[['N','P','K','temperature','humidity','ph','rainfall']].values
 
-    model = RandomForestClassifier(n_estimators=100, random_state=42, oob_score=True)
+    model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=1)
     model.fit(X, y)
-    # Store the real OOB score so routes can display it
-    model._oob_score_pct = round(model.oob_score_ * 100, 1)
-
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
-    with open(model_path, 'wb') as f:
-        pickle.dump(model, f)
-    with open(encoder_path, 'wb') as f:
-        pickle.dump(le, f)
+    return model, le
 
 
-# ---------------------------------------------------------------------------
-# Route
-# ---------------------------------------------------------------------------
+# Model exploration bounds, not recommended field or fertilizer values.
+INPUT_FIELDS = [
+    ('N', 'crop_demo_n', 0, 300, '80'),
+    ('P', 'crop_demo_p', 0, 300, '45'),
+    ('K', 'crop_demo_k', 0, 300, '40'),
+    ('temperature', 'crop_temperature_label', -10, 55, '25'),
+    ('humidity', 'crop_humidity_label', 0, 100, '65'),
+    ('ph', 'crop_ph_label', 0, 14, '6.5'),
+    ('rainfall', 'crop_rainfall_label', 0, 500, '150'),
+]
+
+
+def _validated_features(form):
+    values = []
+    for name, label, lower, upper, example in INPUT_FIELDS:
+        raw = form.get(name, '')
+        if not isinstance(raw, str) or not raw.strip() or len(raw) > 30:
+            raise ValueError('Missing or invalid model input')
+        value = float(raw)
+        if not math.isfinite(value) or not lower <= value <= upper:
+            raise ValueError('Model input outside supported range')
+        values.append(value)
+    return np.array([values])
+
+
 @crop_bp.route('/', methods=['GET', 'POST'])
 @login_required
 def recommend():
-    # Crop AI is for farmers — redirect buyers politely
-    if current_user.is_buyer():
-        flash('Crop Recommendation is a farmer tool. Browse our marketplace instead!', 'info')
+    if not current_user.is_farmer():
+        flash('Crop exploration is a farmer tool.', 'info')
         return redirect(url_for('marketplace.listing'))
-    prediction = None
-    accuracy   = None
-    tip        = None
-
+    prediction, tip, error, status = None, None, None, 200
     if request.method == 'POST':
         try:
-            N        = float(request.form['N'])
-            P        = float(request.form['P'])
-            K        = float(request.form['K'])
-            temp     = float(request.form['temperature'])
-            humidity = float(request.form['humidity'])
-            ph       = float(request.form['ph'])
-            rainfall = float(request.form['rainfall'])
-
-            model, encoder = _get_model()
-            features = np.array([[N, P, K, temp, humidity, ph, rainfall]])
-            pred_idx = model.predict(features)[0]
-            prediction = encoder.inverse_transform([pred_idx])[0].title()
-            tip = CROP_TIPS.get(prediction.lower(), '')
-
-            # Use the real OOB score stored at training time, or fall back to computing it
-            accuracy = getattr(model, '_oob_score_pct', None)
-            if accuracy is None and hasattr(model, 'oob_score_'):
-                accuracy = round(model.oob_score_ * 100, 1)
-
-        except Exception as e:
-            flash(f'Prediction error: {e}', 'danger')
-
-    return render_template('crop/recommendation.html',
-                           prediction=prediction,
-                           accuracy=accuracy,
-                           tip=tip)
+            features = _validated_features(request.form)
+        except (ValueError, TypeError, OverflowError):
+            error, status = 'crop_invalid_values', 400
+        else:
+            try:
+                model, encoder = _get_model()
+                predicted = encoder.inverse_transform(model.predict(features))[0]
+                prediction = str(predicted).title()
+                tip = CROP_TIPS.get(str(predicted), '')
+            except Exception as exc:
+                current_app.logger.warning('Crop exploration unavailable (%s)', type(exc).__name__)
+                error, status = 'crop_temporarily_unavailable', 503
+    return render_template('crop/recommendation.html', prediction=prediction,
+                           tip=tip, crop_error=error, input_fields=INPUT_FIELDS), status

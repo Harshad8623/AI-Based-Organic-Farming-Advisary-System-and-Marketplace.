@@ -106,6 +106,23 @@ class Product(db.Model):
     ratings    = db.relationship('Rating',   backref='product', lazy=True)
 
     @property
+    def purchase_limit(self):
+        from commerce import parse_stock, MAX_QUANTITY
+        try:
+            amount, _ = parse_stock(self.quantity)
+            return min(int(amount), MAX_QUANTITY)
+        except ValueError:
+            return 0
+
+    @property
+    def stock_unit(self):
+        from commerce import parse_stock
+        try:
+            return parse_stock(self.quantity)[1]
+        except ValueError:
+            return 'unit'
+
+    @property
     def avg_rating(self):
         if not self.ratings:
             return 0
@@ -142,6 +159,19 @@ class Order(db.Model):
 
     # Relationships
     rating = db.relationship('Rating', backref='order', uselist=False, cascade='all, delete-orphan')
+    receipt = db.relationship('OrderReceipt', backref='order', uselist=False, cascade='all, delete-orphan')
+
+    @property
+    def product_name(self):
+        """Keep new receipts independent of mutable/deleted marketplace listings."""
+        if self.receipt:
+            return self.receipt.product_name
+        return self.product.name if self.product else '(Product removed)'
+
+    @property
+    def quantity_unit(self):
+        # An old record without a receipt has no reliable historical unit.
+        return self.receipt.unit if self.receipt else ''
 
     @validates('status')
     def validate_status(self, key, value):
@@ -224,3 +254,29 @@ class CropRoadmap(db.Model):
 
     def __repr__(self):
         return f'<CropRoadmap {self.crop_name}>'
+
+
+class CheckoutAttempt(db.Model):
+    """Immutable checkout snapshot and durable replay protection.
+
+    Added as a new table so existing installations require no column migration.
+    """
+    __tablename__ = 'checkout_attempts'
+    id = db.Column(db.String(64), primary_key=True)
+    buyer_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    amount_paise = db.Column(db.Integer, nullable=False)
+    delivery_location = db.Column(db.String(500), nullable=False)
+    items_json = db.Column(db.Text, nullable=False)
+    gateway_order_id = db.Column(db.String(100), unique=True)
+    payment_id = db.Column(db.String(100), unique=True)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class OrderReceipt(db.Model):
+    """Immutable purchased listing details, additive for existing installations."""
+    __tablename__ = 'order_receipts'
+    order_id = db.Column(db.Integer, db.ForeignKey('orders.id'), primary_key=True)
+    product_name = db.Column(db.String(100), nullable=False)
+    unit = db.Column(db.String(20), nullable=False)
+    unit_price_paise = db.Column(db.Integer, nullable=False)

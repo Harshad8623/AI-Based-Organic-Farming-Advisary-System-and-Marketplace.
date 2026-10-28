@@ -1,281 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Crop Recommendation AI — KrishiAI{% endblock %}
-
+{% block title %}Crop explorer — KrishiAI{% endblock %}
 {% block content %}
 <div class="container">
-
-  <h2 class="fw-bold text-success mb-1"><i class="bi bi-cpu me-2"></i><span data-i18n="crop_heading">Crop Recommendation</span></h2>
-  <p class="text-muted mb-4" data-i18n="crop_subtitle">
-    Enter your soil and weather data. Our Random Forest model (trained on 22 crops) will suggest the best crop for you.
-  </p>
-
+  <h1 class="h2 fw-bold text-success" data-i18n="crop_explorer_title">Crop explorer</h1>
+  <p class="text-muted" data-i18n="crop_explorer_intro">Explore how a demonstration model groups 22 crops using example conditions.</p>
+  <div class="alert alert-warning" role="note">
+    <strong data-i18n="crop_demo_badge">Learning tool — synthetic data</strong>
+    <p class="mb-0 mt-1" data-i18n="crop_demo_warning">This model was trained on generated examples, not verified field trials. Its output is not a planting recommendation, yield forecast, or fertilizer prescription. Confirm crop suitability with a local agricultural expert.</p>
+  </div>
+  {% if crop_error %}<div class="alert alert-danger" role="alert" data-i18n="{{ crop_error }}">Check every value against the ranges shown below.</div>{% endif %}
   <div class="row g-4">
-
-    <!-- Input Form -->
-    <div class="col-lg-5">
-      <div class="card shadow-sm">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-          <div>
-            <i class="bi bi-input-cursor me-1"></i><span data-i18n="crop_heading">Soil & Weather Parameters</span>
-          </div>
-          <button type="button" onclick="startFormVoiceFill()" class="btn btn-sm btn-light text-success fw-bold py-1 px-2" style="border-radius:8px;" id="voiceFillBtn">
-            🎙️ Voice Fill
-          </button>
-        </div>
-        <div class="card-body">
-          <form method="POST" action="{{ url_for('crop.recommend') }}">
-
-            <p class="small text-muted mb-3">
-              <i class="bi bi-info-circle me-1"></i>
-              You can get N, P, K values from a soil test kit (available at KVK centers).
-            </p>
-
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label" data-i18n="crop_nitrogen_label">Nitrogen (N)</label>
-                <input type="number" class="form-control" name="N" step="0.1"
-                       placeholder="e.g. 80" required />
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" data-i18n="crop_phosphorus_label">Phosphorus (P)</label>
-                <input type="number" class="form-control" name="P" step="0.1"
-                       placeholder="e.g. 45" required />
-              </div>
-              <div class="col-md-4">
-                <label class="form-label" data-i18n="crop_potassium_label">Potassium (K)</label>
-                <input type="number" class="form-control" name="K" step="0.1"
-                       placeholder="e.g. 40" required />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" data-i18n="crop_temperature_label">Temperature (°C)</label>
-                <input type="number" class="form-control" name="temperature" step="0.1"
-                       placeholder="e.g. 25" required />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" data-i18n="crop_humidity_label">Humidity (%)</label>
-                <input type="number" class="form-control" name="humidity" step="0.1"
-                       min="0" max="100" placeholder="e.g. 65" required />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" data-i18n="crop_ph_label">Soil pH</label>
-                <input type="number" class="form-control" name="ph" step="0.01"
-                       min="0" max="14" placeholder="e.g. 6.5" required />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" data-i18n="crop_rainfall_label">Rainfall (mm)</label>
-                <input type="number" class="form-control" name="rainfall" step="0.1"
-                       placeholder="e.g. 150" required />
-              </div>
+    <div class="col-lg-6">
+      <section class="card card-body">
+        <h2 class="h4" data-i18n="crop_try_inputs">Try example conditions</h2>
+        <p class="small text-muted" data-i18n="crop_units_note">N, P and K use the demo model's numeric scale. Do not copy laboratory values with different units or use these numbers as fertilizer doses. Rainfall is an illustrative input without a defined season.</p>
+        <form method="POST" action="{{ url_for('crop.recommend') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="row g-3">
+          {% for name, label, lower, upper, example in input_fields %}
+            <div class="col-6">
+              <label class="form-label" for="crop-{{ name }}" data-i18n="{{ label }}">{{ name }}</label>
+              <input type="number" id="crop-{{ name }}" class="form-control" name="{{ name }}" min="{{ lower }}" max="{{ upper }}" step="any" value="{{ request.form.get(name, '') }}" placeholder="{{ example }}" aria-describedby="range-{{ name }}" required>
+              <small id="range-{{ name }}" class="text-muted">{{ lower }} – {{ upper }}</small>
             </div>
-
-            <button type="submit" class="btn btn-success w-100 mt-4" data-i18n="crop_btn">
-              <i class="bi bi-lightning me-1"></i>Recommend Crop
-            </button>
-
-          </form>
-        </div>
-      </div>
-
-      <!-- Example values table -->
-      <div class="card mt-3">
-        <div class="card-header bg-light" data-i18n="crop_quick_ref">📘 Quick Reference (Mean Values)</div>
-        <div class="card-body p-2">
-          <div class="table-responsive">
-            <table class="table table-sm table-borderless mb-0">
-              <thead class="table-light">
-                <tr><th data-i18n="roadmap_col_crop">Crop</th><th>N</th><th>P</th><th>K</th><th>pH</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>Rice</td><td>80</td><td>45</td><td>40</td><td>6.5</td></tr>
-                <tr><td>Wheat</td><td>77</td><td>48</td><td>20</td><td>6.3</td></tr>
-                <tr><td>Cotton</td><td>117</td><td>46</td><td>19</td><td>6.9</td></tr>
-                <tr><td>Banana</td><td>100</td><td>75</td><td>50</td><td>5.7</td></tr>
-              </tbody>
-            </table>
+          {% endfor %}
           </div>
-        </div>
-      </div>
+          <button type="submit" class="btn btn-success w-100 mt-4" data-i18n="crop_explore_button">Explore example</button>
+        </form>
+      </section>
     </div>
-
-    <!-- Result -->
-    <div class="col-lg-7">
+    <div class="col-lg-6">
+      <section class="card card-body h-100">
       {% if prediction %}
-        <div class="card border-success shadow-sm">
-          <div class="card-header bg-success text-white" data-i18n="crop_result_title">
-            <i class="bi bi-check-circle me-1"></i>Recommendation Result
-          </div>
-          <div class="card-body text-center py-5">
-            <div style="font-size:5rem">🌾</div>
-            <h2 class="text-success fw-bold mt-2">{{ prediction }}</h2>
-            <p class="text-muted mb-3" data-i18n="crop_top_pick">Recommended crop for your conditions</p>
-
-            {% if tip %}
-              <div class="alert alert-success text-start" data-translate>
-                <i class="bi bi-lightbulb me-1"></i>{{ tip }}
-              </div>
-            {% endif %}
-
-            <div class="d-flex justify-content-center gap-3 mt-2">
-              <div class="text-center">
-                <div class="fw-bold text-success fs-4">{{ accuracy }}%</div>
-                <small class="text-muted" data-i18n="crop_model_accuracy">Model Accuracy (OOB)</small>
-              </div>
-              <div class="text-center">
-                <div class="fw-bold text-success fs-4">RF</div>
-                <small class="text-muted" data-i18n="crop_algorithm">Algorithm</small>
-              </div>
-              <div class="text-center">
-                <div class="fw-bold text-success fs-4">22</div>
-                <small class="text-muted" data-i18n="crop_crops_classified">Crops Classified</small>
-              </div>
-            </div>
-          </div>
-        </div>
+        <span class="badge text-bg-light align-self-start mb-3" data-i18n="crop_demo_result">Demo model output</span>
+        <h2 class="h3 text-success">{{ prediction }}</h2>
+        {% if tip %}<p data-translate>{{ tip }}</p>{% endif %}
+        <p class="small text-muted" data-i18n="crop_result_warning">No real-world accuracy or confidence is established for this result. Location, season, water supply, local varieties, soil testing and market access must be considered separately.</p>
       {% else %}
-        <div class="card h-100 d-flex align-items-center justify-content-center bg-light">
-          <div class="text-center text-muted p-5">
-            <div style="font-size:4rem">🌱</div>
-            <h5 class="mt-3" data-i18n="crop_enter_values">Enter values on the left</h5>
-            <p data-i18n="crop_enter_values_sub">Our AI model will predict the best crop for your farm conditions.</p>
-          </div>
-        </div>
+        <div class="fs-1 mb-3" aria-hidden="true">🌱</div>
+        <h2 class="h4" data-i18n="crop_prepare_title">Choose your next crop carefully</h2>
+        <p class="text-muted" data-i18n="crop_prepare_text">A soil test, reliable water supply, the planting season and local demand are more useful than a model score alone.</p>
       {% endif %}
-    </div>
-
-  </div>
-</div>
-
-<!-- Voice Instructions Overlay -->
-<div id="voiceOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center;">
-  <div class="card p-4 text-center" style="max-width:520px; border-radius:24px; border:2px solid #2ed573; box-shadow:0 12px 40px rgba(46,213,115,0.45);">
-    <div class="fs-1 mb-2">🎙️</div>
-    <h5 class="fw-bold text-success" id="voiceTitle">Listening to Soil Details...</h5>
-    <p class="text-muted small" id="voicePrompt">Please say N, P, K, Temperature, Humidity, pH, and Rainfall values.</p>
-    <div class="alert alert-success text-start py-2 mb-3" style="font-size:12px; line-height:1.6; border-radius:12px;">
-      <strong>English Example:</strong> "Nitrogen 80, Phosphorus 45, Potassium 40, Temperature 25, Humidity 65, pH 6.5, Rainfall 150"<br/>
-      <strong>Hindi Example:</strong> "नाइट्रोजन 80, फास्फोरस 45, पोटेशियम 40, तापमान 25, आर्द्रता 65, पीएच 6.5, बारिश 150"<br/>
-      <strong>Marathi Example:</strong> "नायट्रोजन 80, फॉस्फरस 45, पोटॅशियम 40, तापमान 25, आर्द्रता 65, पीएच 6.5, पाऊस 150"
-    </div>
-    <div class="spinner-grow text-success my-2" role="status">
-      <span class="visually-hidden">Listening...</span>
-    </div>
-    <div class="mt-3">
-      <button type="button" onclick="stopFormVoiceFill()" class="btn btn-outline-danger px-4" style="border-radius:12px;">Cancel</button>
+        <hr>
+        <h3 class="h5" data-i18n="crop_next_steps">Plan with local information</h3>
+        <ul class="ps-3">
+          <li class="mb-2" data-i18n="crop_step_soil">Take a soil test report to your KVK or agricultural extension officer.</li>
+          <li class="mb-2" data-i18n="crop_step_water">Check seasonal rainfall and the water available on your farm.</li>
+          <li class="mb-2" data-i18n="crop_step_market">Compare seed costs, labour and likely buyers before planting.</li>
+        </ul>
+        <a href="{{ url_for('roadmap.index') }}" class="btn btn-outline-success align-self-start mt-auto" data-i18n="crop_browse_guides">Browse crop guides</a>
+      </section>
     </div>
   </div>
 </div>
-
-<script>
-let formVoiceRecognition = null;
-let isFormVoiceListening = false;
-
-function startFormVoiceFill() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert('Voice input not supported in this browser. Please use Google Chrome.');
-    return;
-  }
-
-  formVoiceRecognition = new SpeechRecognition();
-  formVoiceRecognition.continuous = false;
-  formVoiceRecognition.interimResults = false;
-
-  const appLang = (typeof I18n !== 'undefined' ? I18n.getLang() : 'en');
-  if (appLang === 'hi') {
-    formVoiceRecognition.lang = 'hi-IN';
-    document.getElementById('voiceTitle').textContent = 'मिट्टी का विवरण सुन रहे हैं...';
-    document.getElementById('voicePrompt').textContent = 'कृपया अपने नाइट्रोजन, फास्फोरस, पोटेशियम आदि का मान बोलें।';
-  } else if (appLang === 'mr') {
-    formVoiceRecognition.lang = 'mr-IN';
-    document.getElementById('voiceTitle').textContent = 'मातीचे विवरण ऐकत आहे...';
-    document.getElementById('voicePrompt').textContent = 'कृपया तुमचे नायट्रोजन, फॉस्फरस, पोटॅशियम इ. चे मूल्य सांगा.';
-  } else {
-    formVoiceRecognition.lang = 'en-IN';
-    document.getElementById('voiceTitle').textContent = 'Listening to Soil Details...';
-    document.getElementById('voicePrompt').textContent = 'Please say N, P, K, Temperature, Humidity, pH, and Rainfall values.';
-  }
-
-  formVoiceRecognition.onstart = () => {
-    isFormVoiceListening = true;
-    document.getElementById('voiceOverlay').style.display = 'flex';
-  };
-
-  formVoiceRecognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    const filledFields = parseVoiceInput(transcript);
-    
-    if (filledFields.length > 0) {
-      const msg = appLang === 'hi' 
-        ? `सफलतापूर्वक भरा गया: ${filledFields.join(', ')}` 
-        : appLang === 'mr' 
-        ? `यशस्वीरित्या भरले: ${filledFields.join(', ')}` 
-        : `Successfully filled: ${filledFields.join(', ')}`;
-      alert(msg);
-    } else {
-      const failMsg = appLang === 'hi'
-        ? 'क्षमा करें, हम कोई मान नहीं पहचान पाए। कृपया स्पष्ट रूप से बोलें।'
-        : appLang === 'mr'
-        ? 'क्षमस्व, आम्हाला कोणतेही मूल्य ओळखता आले नाही. कृपया स्पष्ट बोला.'
-        : 'Sorry, could not extract any numeric values. Please speak clearly using NPK keywords.';
-      alert(failMsg);
-    }
-  };
-
-  formVoiceRecognition.onerror = (event) => {
-    console.error('Form voice error:', event.error);
-    stopFormVoiceFill();
-  };
-
-  formVoiceRecognition.onend = () => {
-    stopFormVoiceFill();
-  };
-
-  formVoiceRecognition.start();
-}
-
-function stopFormVoiceFill() {
-  isFormVoiceListening = false;
-  document.getElementById('voiceOverlay').style.display = 'none';
-  if (formVoiceRecognition) {
-    try {
-      formVoiceRecognition.stop();
-    } catch(e){}
-  }
-}
-
-function parseVoiceInput(text) {
-  text = text.toLowerCase();
-  console.log('[Voice Form Parser Input]', text);
-
-  // Mapping keyword regexes to the form input names
-  const mapping = {
-    N: [/n(?:itrogen)?\s*(\d+(\.\d+)?)/, /नाइट्रोजन\s*(\d+(\.\d+)?)/, /नायट्रोजन\s*(\d+(\.\d+)?)/],
-    P: [/p(?:hosphorus)?\s*(\d+(\.\d+)?)/, /फास्फोरस\s*(\d+(\.\d+)?)/, /फॉस्फरस\s*(\d+(\.\d+)?)/],
-    K: [/k(?:otassium)?\s*(\d+(\.\d+)?)/, /पोटेशियम\s*(\d+(\.\d+)?)/, /पोटॅशियम\s*(\d+(\.\d+)?)/],
-    temperature: [/temp(?:erature)?\s*(\d+(\.\d+)?)/, /तापमान\s*(\d+(\.\d+)?)/],
-    humidity: [/humid(?:ity)?\s*(\d+(\.\d+)?)/, /आर्द्रता\s*(\d+(\.\d+)?)/],
-    ph: [/ph\s*(\d+(\.\d+)?)/, /पीएच\s*(\d+(\.\d+)?)/, /माती\s*ph\s*(\d+(\.\d+)?)/],
-    rainfall: [/rain(?:fall)?\s*(\d+(\.\d+)?)/, /वर्षा\s*(\d+(\.\d+)?)/, /पाऊस\s*(\d+(\.\d+)?)/, /बारिश\s*(\d+(\.\d+)?)/]
-  };
-
-  const fieldsFilled = [];
-
-  for (const [key, regexes] of Object.entries(mapping)) {
-    for (const regex of regexes) {
-      const match = text.match(regex);
-      if (match) {
-        const val = parseFloat(match[1]);
-        const inputEl = document.querySelector(`[name="${key}"]`);
-        if (inputEl && !isNaN(val)) {
-          inputEl.value = val;
-          fieldsFilled.push(key);
-          break;
-        }
-      }
-    }
-  }
-
-  return fieldsFilled;
-}
-</script>
 {% endblock %}

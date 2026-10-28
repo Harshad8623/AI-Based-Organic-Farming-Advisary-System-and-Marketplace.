@@ -1,952 +1,263 @@
 {% extends "base.html" %}
-{% block title %}KrishiBot — AI Farming Advisor{% endblock %}
-
+{% block title %}Farming Assistant — KrishiAI{% endblock %}
 {% block head_extra %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* ── Force dark theme on all ancestor elements ── */
-  html, body { background: #0d1f12 !important; color: #e8f5e9 !important; }
-  main, main.py-4 {
-    background: #0d1f12 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-  }
-
-  /* ══════════════════════════════════════════════════════
-     PAGE SHELL
-  ══════════════════════════════════════════════════════ */
-  .krishi-chat-page {
-    background: linear-gradient(160deg, #0d1f12 0%, #0f2d1a 60%, #0a1a0e 100%);
-    min-height: calc(100vh - 62px);
-    display: flex;
-    flex-direction: column;
-    font-family: 'Inter', sans-serif;
-    color: #e8f5e9;
-  }
-
-  /* ══════════════════════════════════════════════════════
-     HEADER BAR
-  ══════════════════════════════════════════════════════ */
-  .chat-header {
-    background: rgba(255,255,255,0.04);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    padding: 14px 28px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    backdrop-filter: blur(20px);
-  }
-  .bot-avatar {
-    width: 44px; height: 44px;
-    background: linear-gradient(135deg, #2ed573, #1e8449);
-    border-radius: 14px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-    box-shadow: 0 4px 16px rgba(46,213,115,0.35);
-  }
-  .bot-info { flex: 1; }
-  .bot-name { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
-  .bot-status {
-    font-size: 12px; color: #6ee56e;
-    display: flex; align-items: center; gap: 5px;
-  }
-  .bot-status::before {
-    content: '';
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #2ed573;
-    animation: blink 2s infinite;
-    display: inline-block;
-  }
-  @keyframes blink {
-    0%,100% { opacity:1; } 50% { opacity:0.4; }
-  }
-  .gemini-badge {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 20px;
-    padding: 5px 13px;
-    font-size: 12px; color: rgba(255,255,255,0.75);
-    font-weight: 500;
-  }
-  .gemini-badge .dot { width:7px; height:7px; border-radius:50%; background:#2ed573; }
-
-  .header-actions { display: flex; gap: 8px; }
-  .header-btn {
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    padding: 7px 10px;
-    color: rgba(255,255,255,0.6);
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
-    line-height: 1;
-  }
-  .header-btn:hover { background: rgba(255,255,255,0.13); color: #fff; }
-
-  /* ══════════════════════════════════════════════════════
-     CHAT WINDOW
-  ══════════════════════════════════════════════════════ */
-  .chat-window {
-    flex: 1;
-    overflow-y: auto;
-    padding: 28px 0;
-    scroll-behavior: smooth;
-    max-height: calc(100vh - 200px);
-    background: #0d2015; /* explicit dark bg — never inherits white */
-  }
-  .chat-window::-webkit-scrollbar { width: 5px; }
-  .chat-window::-webkit-scrollbar-track { background: transparent; }
-  .chat-window::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 10px; }
-
-  .msg-row {
-    display: flex;
-    gap: 12px;
-    padding: 6px 28px;
-    max-width: 860px;
-    margin: 0 auto;
-    width: 100%;
-    animation: msgIn 0.25s ease-out;
-  }
-  @keyframes msgIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .msg-row.user-row { flex-direction: row-reverse; }
-
-  /* Avatars */
-  .msg-avatar {
-    width: 34px; height: 34px; border-radius: 10px;
-    flex-shrink: 0; display: flex; align-items: center;
-    justify-content: center; font-size: 16px; margin-top: 4px;
-  }
-  .msg-avatar.bot  { background: linear-gradient(135deg, #2ed573, #1e8449); }
-  .msg-avatar.user { background: linear-gradient(135deg, #667eea, #764ba2); color: white; font-weight: 700; font-size: 13px; }
-
-  /* Bubbles */
-  .msg-content { max-width: 75%; display: flex; flex-direction: column; gap: 4px; }
-  .msg-row.user-row .msg-content { align-items: flex-end; }
-
-  .bubble {
-    padding: 13px 17px;
-    border-radius: 18px;
-    font-size: 14.5px;
-    line-height: 1.7;
-    word-break: break-word;
-    position: relative;
-  }
-  /* BOT bubble: dark card with light text — clear on dark chat-window */
-  .bot-bubble {
-    background: rgba(255,255,255,0.09);
-    border: 1px solid rgba(255,255,255,0.13);
-    color: #e8f5e9;
-    border-radius: 4px 18px 18px 18px;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.07);
-    backdrop-filter: blur(4px);
-  }
-  .user-bubble {
-    background: linear-gradient(135deg, #2d6a4f, #1a5c34);
-    color: #fff;
-    border-radius: 18px 4px 18px 18px;
-    border: 1px solid rgba(46,213,115,0.25);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-  }
-
-  /* Markdown in bot bubbles — light text on dark card */
-  .bot-bubble h3 { font-size: 15px; font-weight: 700; color: #2ed573; margin: 10px 0 6px; }
-  .bot-bubble strong { color: #7fffc4; font-weight: 600; }
-  .bot-bubble em { color: #a8e6cf; font-style: italic; }
-  .bot-bubble p  { margin: 0 0 7px; }
-  .bot-bubble p:last-child { margin-bottom: 0; }
-  .bot-bubble ul { margin: 7px 0 7px 4px; padding-left: 18px; }
-  .bot-bubble ul li { margin: 5px 0; color: rgba(255,255,255,.85); }
-  .bot-bubble ol { margin: 7px 0 7px 4px; padding-left: 18px; }
-  .bot-bubble ol li { margin: 5px 0; color: rgba(255,255,255,.85); }
-  .bot-bubble code {
-    background: rgba(46,213,115,0.15);
-    border: 1px solid rgba(46,213,115,0.25);
-    border-radius: 5px; padding: 1px 6px;
-    font-size: 13px; color: #7fffc4; font-family: monospace;
-  }
-  .bot-bubble blockquote {
-    border-left: 3px solid #2ed573;
-    padding-left: 12px; margin: 10px 0;
-    color: rgba(255,255,255,0.6); font-style: italic;
-  }
-  .bot-bubble table { width:100%; border-collapse:collapse; margin:10px 0; font-size:13px; }
-  .bot-bubble th { background:rgba(46,213,115,.18); color:#7fffc4; padding:7px 10px; text-align:left; }
-  .bot-bubble td { padding:6px 10px; border-bottom:1px solid rgba(255,255,255,.07); color:rgba(255,255,255,.8); }
-  .bot-bubble hr { border:none; border-top:1px solid rgba(255,255,255,.1); margin:10px 0; }
-  .bot-bubble a  { color:#2ed573; text-decoration:underline; }
-
-  /* Message meta */
-  .msg-meta {
-    display: flex; align-items: center; gap: 8px;
-    padding: 0 2px;
-    opacity: 0; transition: opacity 0.2s;
-  }
-  .msg-row:hover .msg-meta { opacity: 1; }
-  .msg-time { font-size: 11px; color: rgba(255,255,255,0.35); }
-  .msg-source-badge {
-    font-size: 10px; background: rgba(46,213,115,0.15);
-    color: #6ee56e; border-radius: 10px; padding: 1px 8px;
-    border: 1px solid rgba(46,213,115,0.2);
-  }
-  .copy-btn {
-    background: rgba(255,255,255,0.07); border: none;
-    border-radius: 6px; padding: 3px 7px;
-    color: rgba(255,255,255,0.4); cursor: pointer; font-size: 12px;
-    transition: all 0.15s;
-  }
-  .copy-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
-
-  /* ══════════════════════════════════════════════════════
-     TYPING INDICATOR
-  ══════════════════════════════════════════════════════ */
-  .typing-wrap {
-    display: flex; gap: 5px; align-items: center;
-    padding: 6px 4px;
-  }
-  .typing-wrap span {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #2d6a4f;
-    animation: typing 1.2s infinite;
-  }
-  .typing-wrap span:nth-child(2) { animation-delay: 0.2s; }
-  .typing-wrap span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes typing {
-    0%,60%,100% { transform: translateY(0); opacity: 0.3; }
-    30%          { transform: translateY(-7px); opacity: 1; }
-  }
-  .typing-label { font-size: 12px; color: #4a7c5a; margin-left: 6px; font-weight: 500; }
-
-  /* ══════════════════════════════════════════════════════
-     SUGGESTED FOLLOW-UPS
-  ══════════════════════════════════════════════════════ */
-  .suggestions-row {
-    max-width: 860px; margin: 4px auto 0;
-    padding: 0 28px 0 74px;
-    display: flex; flex-wrap: wrap; gap: 7px;
-    animation: msgIn 0.3s ease-out 0.1s both;
-  }
-  .suggest-chip {
-    background: rgba(46,213,115,0.08);
-    border: 1px solid rgba(46,213,115,0.25);
-    color: #7fffc4; border-radius: 20px;
-    padding: 5px 13px; font-size: 12.5px;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; gap: 5px;
-  }
-  .suggest-chip:hover {
-    background: rgba(46,213,115,0.2);
-    border-color: rgba(46,213,115,0.5);
-    color: #fff; transform: translateY(-1px);
-  }
-
-  /* ══════════════════════════════════════════════════════
-     WELCOME CARD
-  ══════════════════════════════════════════════════════ */
-  .welcome-card {
-    max-width: 860px; margin: 20px auto;
-    padding: 28px 28px 20px;
-    width: 100%;
-  }
-  .welcome-title {
-    font-size: 26px; font-weight: 700; color: #fff;
-    margin-bottom: 4px;
-  }
-  .welcome-title span { color: #2ed573; }
-  .welcome-subtitle { color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 22px; }
-  .capability-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px; margin-bottom: 4px;
-  }
-  .cap-card {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 14px; padding: 14px 16px;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: flex-start; gap: 10px;
-  }
-  .cap-card:hover {
-    background: rgba(46,213,115,0.1);
-    border-color: rgba(46,213,115,0.3);
-    transform: translateY(-2px);
-  }
-  .cap-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
-  .cap-text strong { display: block; font-size: 13px; color: #fff; font-weight: 600; }
-  .cap-text small { font-size: 12px; color: rgba(255,255,255,0.45); }
-
-  /* ══════════════════════════════════════════════════════
-     INPUT BAR
-  ══════════════════════════════════════════════════════ */
-  .input-area {
-    border-top: 1px solid rgba(255,255,255,0.07);
-    background: rgba(0,0,0,0.25);
-    backdrop-filter: blur(20px);
-    padding: 16px 28px;
-    position: sticky; bottom: 0;
-  }
-  .input-inner {
-    max-width: 860px; margin: 0 auto;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .input-box {
-    display: flex; gap: 8px; align-items: flex-end;
-    background: rgba(255,255,255,0.06);
-    border: 1.5px solid rgba(255,255,255,0.1);
-    border-radius: 16px; padding: 10px 12px;
-    transition: border-color 0.2s;
-  }
-  .input-box:focus-within {
-    border-color: rgba(46,213,115,0.5);
-    background: rgba(255,255,255,0.08);
-  }
-  #chatInput {
-    flex: 1; background: transparent; border: none;
-    color: #fff; font-size: 14.5px; outline: none;
-    resize: none; max-height: 130px; min-height: 24px;
-    line-height: 1.5; font-family: 'Inter', sans-serif;
-    padding: 2px 0;
-  }
-  #chatInput::placeholder { color: rgba(255,255,255,0.3); }
-  #chatInput::-webkit-scrollbar { width: 3px; }
-  #chatInput::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
-
-  .input-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-  .act-btn {
-    width: 36px; height: 36px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; border: none; font-size: 15px; transition: all 0.2s;
-  }
-  .voice-btn {
-    background: rgba(255,255,255,0.07);
-    color: rgba(255,255,255,0.55);
-  }
-  .voice-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
-  .voice-btn.listening {
-    background: rgba(220,53,69,0.2); color: #ff6b81;
-    animation: mic-pulse 1.2s infinite;
-  }
-  @keyframes mic-pulse {
-    0%   { box-shadow: 0 0 0 0 rgba(220,53,69,0.5); }
-    70%  { box-shadow: 0 0 0 10px rgba(220,53,69,0); }
-    100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); }
-  }
-  .send-btn {
-    background: linear-gradient(135deg, #2ed573, #1e8449);
-    color: white; width: 38px; height: 38px;
-    border-radius: 11px; font-size: 15px;
-    opacity: 0.4; transition: all 0.2s;
-    pointer-events: none;
-  }
-  .send-btn.active { opacity: 1; pointer-events: auto; }
-  .send-btn.active:hover { transform: scale(1.07); box-shadow: 0 4px 14px rgba(46,213,115,0.4); }
-
-  /* Quick chips */
-  .quick-chips {
-    display: flex; gap: 7px; flex-wrap: wrap; overflow-x: auto;
-    padding-bottom: 2px;
-  }
-  .quick-chips::-webkit-scrollbar { display: none; }
-  .q-chip {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 20px; padding: 5px 13px;
-    font-size: 12.5px; color: rgba(255,255,255,0.6);
-    cursor: pointer; white-space: nowrap;
-    transition: all 0.2s; user-select: none;
-  }
-  .q-chip:hover { background: rgba(46,213,115,0.12); border-color: rgba(46,213,115,0.3); color: #fff; }
-
-  .input-footer {
-    text-align: center; font-size: 11px; color: rgba(255,255,255,0.2);
-    padding-top: 4px;
-  }
-
-  /* ══════════════════════════════════════════════════════
-     CHAR COUNT
-  ══════════════════════════════════════════════════════ */
-  .char-count { font-size: 11px; color: rgba(255,255,255,0.25); align-self: flex-end; flex-shrink: 0; }
-  .char-count.warn { color: #ff6b81; }
-
-  /* ══════════════════════════════════════════════════════
-     LANGUAGE PILLS in header
-  ══════════════════════════════════════════════════════ */
-  .lang-selector { display: flex; gap: 4px; }
-  .lang-pill {
-    font-size: 11px; padding: 3px 10px; border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: transparent; color: rgba(255,255,255,0.45);
-    cursor: pointer; transition: all 0.2s;
-  }
-  .lang-pill.active, .lang-pill:hover {
-    background: rgba(46,213,115,0.2);
-    border-color: rgba(46,213,115,0.4);
-    color: #2ed573;
-  }
-
-  /* Responsive */
-  @media (max-width: 640px) {
-    .chat-header { padding: 10px 16px; }
-    .msg-row { padding: 6px 16px; }
-    .suggestions-row { padding-left: 62px; }
-    .welcome-card { padding: 20px 16px 16px; }
-    .input-area { padding: 12px 16px; }
-    .capability-grid { grid-template-columns: 1fr 1fr; }
-    .welcome-title { font-size: 20px; }
+  .farm-chat { max-width: 1100px; margin: 0 auto; }
+  .farm-chat .chat-log { height: min(56vh, 520px); min-height: 280px; overflow-y: auto; padding: 1.25rem; background: #f6faf7; border-radius: 1rem; }
+  .farm-chat .chat-message { max-width: 90%; width: fit-content; margin: 0 0 1rem; padding: 1rem; background: #fff; border: 1px solid #dce9df; border-radius: 1rem 1rem 1rem .25rem; overflow-wrap: anywhere; }
+  .farm-chat .chat-message.is-user { margin-left: auto; background: #e3f2e8; border-radius: 1rem 1rem .25rem 1rem; }
+  .farm-chat .message-text { white-space: pre-wrap; line-height: 1.7; margin: .25rem 0 0; }
+  .farm-chat .topic-button { text-align: left; min-height: 44px; }
+  .farm-chat .chat-composer textarea { resize: vertical; min-height: 96px; }
+  .farm-chat .chat-language { max-width: 200px; }
+  .farm-chat .chat-notice { font-size: .875rem; color: #53675a; }
+  .farm-chat .chat-status { min-height: 1.5rem; }
+  @media (max-width: 575px) {
+    .farm-chat .chat-log { padding: .75rem; min-height: 280px; }
+    .farm-chat .chat-message { max-width: 100%; padding: .8rem; }
   }
 </style>
 {% endblock %}
-
 {% block content %}
-<div class="krishi-chat-page" id="krishiChatPage">
-
-  <!-- ─── HEADER ─────────────────────────────────────────── -->
-  <div class="chat-header">
-    <div class="bot-avatar">🌿</div>
-    <div class="bot-info">
-      <div class="bot-name">KrishiBot</div>
-      <div class="bot-status" id="botStatus" data-i18n="chatbot_online">Online · Organic Farming Expert</div>
+<div class="container farm-chat">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+      <h1 class="h2 fw-bold text-success" data-chat="heading">Farming assistant</h1>
+      <p class="text-muted mb-2" data-chat="subtitle">Practical guidance, in your language.</p>
+      <span class="badge rounded-pill bg-light text-success border" id="chatMode"></span>
     </div>
-
-    <div class="gemini-badge ms-auto me-3">
-      {% if gemini_active %}
-        <div class="dot"></div>
-        <span>Gemini AI</span>
-      {% else %}
-        <span style="color:#ffc107;">⚠️ Offline Mode</span>
-      {% endif %}
-    </div>
-
-    <div class="lang-selector">
-      <button class="lang-pill" onclick="setChatLang('en')">EN</button>
-      <button class="lang-pill" onclick="setChatLang('hi')">हि</button>
-      <button class="lang-pill" onclick="setChatLang('mr')">म</button>
-    </div>
-
-    <div class="header-actions ms-2">
-      <button class="header-btn" onclick="clearChat()" title="Clear conversation">
-        <i class="bi bi-trash3"></i>
-      </button>
+    <div class="chat-language">
+      <label class="form-label small" for="chatLanguage" data-chat="language">Language</label>
+      <select id="chatLanguage" class="form-select">
+        <option value="en">English</option>
+        <option value="hi">हिन्दी</option>
+        <option value="mr">मराठी</option>
+      </select>
     </div>
   </div>
-
-  <!-- ─── CHAT WINDOW ───────────────────────────────────── -->
-  <div id="chatWindow" class="chat-window">
-
-    <!-- Welcome Card (hidden once conversation starts) -->
-    <div class="welcome-card" id="welcomeCard">
-      <div class="welcome-title">
-        <span data-i18n="chatbot_welcome_hi">Hey</span> {{ current_user.name.split()[0] }}! 👋<br>
-        <span data-i18n="chatbot_welcome_ask">Ask me anything about</span>
-        <span>organic farming.</span>
-      </div>
-      <div class="welcome-subtitle" data-i18n="chatbot_welcome_sub">
-        I'm powered by Gemini AI — get expert, localised advice in seconds.
-      </div>
-
-      <div class="capability-grid">
-        <div class="cap-card" onclick="sendQuick('How to control pests organically without chemicals?')">
-          <div class="cap-icon">🐛</div>
-          <div class="cap-text">
-            <strong data-i18n="chat_cap_pest">Pest Control</strong>
-            <small data-i18n="chat_cap_pest_sub">Neem, traps, bio-agents</small>
-          </div>
-        </div>
-        <div class="cap-card" onclick="sendQuick('How to make Jeevamrutha at home and when to apply it?')">
-          <div class="cap-icon">🌱</div>
-          <div class="cap-text">
-            <strong data-i18n="chat_cap_fert">Fertilizers</strong>
-            <small data-i18n="chat_cap_fert_sub">Jeevamrutha, compost, panchagavya</small>
-          </div>
-        </div>
-        <div class="cap-card" onclick="sendQuick('What are the best organic methods to manage plant diseases?')">
-          <div class="cap-icon">🍂</div>
-          <div class="cap-text">
-            <strong data-i18n="chat_cap_disease">Diseases</strong>
-            <small data-i18n="chat_cap_disease_sub">Bordeaux, Trichoderma</small>
-          </div>
-        </div>
-        <div class="cap-card" onclick="sendQuick('What is the best irrigation method for saving water in organic farming?')">
-          <div class="cap-icon">💧</div>
-          <div class="cap-text">
-            <strong data-i18n="chat_cap_water">Water Management</strong>
-            <small data-i18n="chat_cap_water_sub">Drip, mulch, scheduling</small>
-          </div>
-        </div>
-        <div class="cap-card" onclick="sendQuick('How to improve soil health and fertility naturally?')">
-          <div class="cap-icon">🌍</div>
-          <div class="cap-text">
-            <strong data-i18n="chat_cap_soil">Soil Health</strong>
-            <small data-i18n="chat_cap_soil_sub">pH, organic matter, cover crops</small>
-          </div>
-        </div>
-        <div class="cap-card" onclick="sendQuick('Which crop should I grow in black cotton soil during Kharif season?')">
-          <div class="cap-icon">🌾</div>
-          <div class="cap-text">
-            <strong data-i18n="chat_cap_crop">Crop Selection</strong>
-            <small data-i18n="chat_cap_crop_sub">Season, soil, rotation advice</small>
-          </div>
+  <div class="row g-4">
+    <aside class="col-lg-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h6 fw-bold" data-chat="topics">Start with a topic</h2>
+          <div class="d-flex flex-column gap-2" id="chatTopics"></div>
+          <hr>
+          <p class="small text-muted mb-0" data-chat="context">For tailored advice, include your crop, village, growth stage and the problem you noticed.</p>
         </div>
       </div>
-    </div>
-
-  </div><!-- /#chatWindow -->
-
-  <!-- ─── INPUT AREA ────────────────────────────────────── -->
-  <div class="input-area">
-    <div class="input-inner">
-
-      <!-- Quick Chips -->
-      <div class="quick-chips" id="quickChips">
-        <span class="q-chip" onclick="sendQuick('How to make organic pesticide at home?')">🌿 <span data-i18n="chip_pest_ctrl">Pest control</span></span>
-        <span class="q-chip" onclick="sendQuick('What is Jeevamrutha and how to prepare it?')">🧪 Jeevamrutha</span>
-        <span class="q-chip" onclick="sendQuick('Best compost method for small farm?')">♻️ <span data-i18n="chip_compost">Composting</span></span>
-        <span class="q-chip" onclick="sendQuick('Which organic fertilizer is best for tomatoes?')">🍅 <span data-i18n="chip_tomato">Tomato tips</span></span>
-        <span class="q-chip" onclick="sendQuick('How much water does rice need per week?')">💧 <span data-i18n="chip_irrigation">Irrigation</span></span>
-        <span class="q-chip" onclick="sendQuick('How to naturally fix nitrogen deficiency in soil?')">🌱 <span data-i18n="chip_soil">Soil health</span></span>
-      </div>
-
-      <!-- Input Box -->
-      <div class="input-box">
-        <textarea id="chatInput"
-                  data-i18n-placeholder="chatbot_ph"
-                  placeholder="Ask a farming question…"
-                  rows="1"
-                  maxlength="500"
-                  oninput="onInputChange()"
-                  onkeydown="handleKey(event)"></textarea>
-
-        <span class="char-count" id="charCount">0/500</span>
-
-        <div class="input-actions">
-          <button class="act-btn voice-btn" id="voiceBtn" onclick="toggleVoice()" title="Voice input">
-            <i class="bi bi-mic" id="voiceIcon"></i>
-          </button>
-          <button class="act-btn send-btn" id="sendBtn" onclick="sendMessage()">
-            <i class="bi bi-send-fill"></i>
-          </button>
+    </aside>
+    <section class="col-lg-9" aria-labelledby="conversationHeading">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+            <h2 id="conversationHeading" class="h6 mb-0" data-chat="conversation">Your conversation</h2>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearChat" data-chat="clear">Clear</button>
+          </div>
+          <div id="chatWindow" class="chat-log" role="log" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+          <div id="chatStatus" class="chat-status small text-muted mt-2" role="status" aria-live="polite"></div>
+          <form id="chatForm" class="chat-composer mt-2">
+            <label for="chatInput" class="form-label fw-semibold" data-chat="question">Your farming question</label>
+            <textarea id="chatInput" class="form-control" maxlength="500" required rows="3" placeholder="Ask about your crop, soil or water…" aria-describedby="chatHelp charCount"></textarea>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2">
+              <small id="charCount" class="text-muted">0 / 500</small>
+              <div class="d-flex gap-2">
+                <button type="button" id="voiceButton" class="btn btn-outline-success" data-chat="voice" hidden>Speak</button>
+                <button type="submit" id="sendButton" class="btn btn-success px-4" data-chat="send">Send question</button>
+              </div>
+            </div>
+            <p id="chatHelp" class="small text-muted mt-2 mb-0" data-chat="keyboard">Press Enter to send. Use Shift + Enter for a new line. Failed messages stay in the box.</p>
+          </form>
         </div>
       </div>
-
-      <div class="input-footer" data-i18n="chatbot_footer">
-        KrishiBot may make mistakes. Always verify critical farming advice with your local KVK.
-      </div>
-    </div>
+      <p class="chat-notice mt-3 mb-0" data-chat="disclaimer">This assistant provides general information, not a diagnosis. Verify important decisions with your local Krishi Vigyan Kendra (KVK).</p>
+    </section>
   </div>
-
-</div><!-- /.krishi-chat-page -->
-
-<!-- ─── SCRIPTS ───────────────────────────────────────────── -->
+</div>
 <script>
-/* ══════════════════════════════════════════════════
-   STATE
-══════════════════════════════════════════════════ */
-let chatLang = (typeof I18n !== 'undefined') ? (I18n.getLang ? I18n.getLang() : 'en') : 'en';
-let conversationCount = 0;
-let voiceRecognition  = null;
-let isListening       = false;
-
-/* ══════════════════════════════════════════════════
-   LANGUAGE STRINGS FOR CHAT UI
-══════════════════════════════════════════════════ */
-const CHAT_STRINGS = {
-  en: {
-    thinking:     'KrishiBot is thinking…',
-    you:          'You',
-    geminiSrc:    '✨ Gemini AI',
-    localSrc:     '📚 Local knowledge',
-    errorSrc:     '⚠️ Fallback',
-    copy:         'Copy',
-    copied:       'Copied!',
-    followUp:     'You might also ask:',
-    errorMsg:     'Sorry, something went wrong. Please try again.',
-    voiceListen:  'Listening… Speak now',
-    clearConfirm: 'Clear the conversation?',
-  },
-  hi: {
-    thinking:     'KrishiBot सोच रहा है…',
-    you:          'आप',
-    geminiSrc:    '✨ Gemini AI',
-    localSrc:     '📚 स्थानीय ज्ञान',
-    errorSrc:     '⚠️ बैकअप',
-    copy:         'कॉपी',
-    copied:       'कॉपी हो गया!',
-    followUp:     'आप यह भी पूछ सकते हैं:',
-    errorMsg:     'माफ़ करें, कुछ गलत हुआ। दोबारा प्रयास करें।',
-    voiceListen:  'सुन रहा हूँ… बोलें',
-    clearConfirm: 'बातचीत साफ़ करें?',
-  },
-  mr: {
-    thinking:     'KrishiBot विचार करत आहे…',
-    you:          'तुम्ही',
-    geminiSrc:    '✨ Gemini AI',
-    localSrc:     '📚 स्थानिक ज्ञान',
-    errorSrc:     '⚠️ बॅकअप',
-    copy:         'कॉपी',
-    copied:       'कॉपी झाले!',
-    followUp:     'तुम्ही हे देखील विचारू शकता:',
-    errorMsg:     'माफ करा, काहीतरी चुकले. पुन्हा प्रयत्न करा.',
-    voiceListen:  'ऐकत आहे… बोला',
-    clearConfirm: 'संभाषण साफ करायचे?',
-  }
-};
-
-/* ══════════════════════════════════════════════════
-   LANGUAGE SUGGESTIONS
-══════════════════════════════════════════════════ */
-const FOLLOW_UPS = {
-  en: {
-    pest:     ['What pests attack wheat?', 'Is neem oil safe for vegetables?', 'How to prevent white fly?'],
-    fertiliz: ['When to apply Jeevamrutha?', 'How to make vermicompost?', 'What is panchagavya?'],
-    disease:  ['How to treat yellow rust?', 'What is Bordeaux mixture?', 'How to prevent blight?'],
-    water:    ['How to set up drip irrigation?', 'When to water tomatoes?', 'What is mulching?'],
-    soil:     ['How to test soil pH at home?', 'What are cover crops?', 'How to fix nitrogen deficiency?'],
-    crop:     ['Best crop for black soil?', 'What to grow in summer?', 'How to plan crop rotation?'],
-    default:  ['Tell me about organic farming', 'How to start organic farming?', 'What is Jeevamrutha?'],
-  },
-  hi: {
-    pest:     ['गेहूं पर कौन से कीट लगते हैं?', 'क्या नीम तेल सब्जियों के लिए सुरक्षित है?', 'सफेद मक्खी कैसे रोकें?'],
-    fertiliz: ['जीवामृत कब डालें?', 'केंचुआ खाद कैसे बनाएं?', 'पंचगव्य क्या होता है?'],
-    disease:  ['पीला रतुआ का इलाज कैसे करें?', 'बोर्डो मिश्रण क्या है?', 'झुलसा रोग कैसे रोकें?'],
-    water:    ['ड्रिप सिंचाई कैसे लगाएं?', 'टमाटर को पानी कब दें?', 'मल्चिंग क्या है?'],
-    soil:     ['घर पर मिट्टी का pH कैसे जांचें?', 'आवरण फसलें क्या होती हैं?', 'नाइट्रोजन की कमी कैसे दूर करें?'],
-    crop:     ['काली मिट्टी में कौन सी फसल अच्छी होती है?', 'गर्मी में क्या उगाएं?', 'फसल चक्र कैसे बनाएं?'],
-    default:  ['जैविक खेती के बारे में बताएं', 'जैविक खेती कैसे शुरू करें?', 'जीवामृत क्या है?'],
-  },
-  mr: {
-    pest:     ['गव्हावर कोणते कीड लागतात?', 'कडुनिंब तेल भाज्यांसाठी सुरक्षित आहे का?', 'पांढरी माशी कशी थांबवावी?'],
-    fertiliz: ['जीवामृत कधी द्यावे?', 'गांडूळखत कसे बनवावे?', 'पंचगव्य म्हणजे काय?'],
-    disease:  ['पिवळा गंज कसा बरा करावा?', 'बोर्डो मिश्रण म्हणजे काय?', 'करपा रोग कसा टाळावा?'],
-    water:    ['ठिबक सिंचन कसे लावावे?', 'टोमॅटोला पाणी कधी द्यावे?', 'मल्चिंग म्हणजे काय?'],
-    soil:     ['घरी मातीचे pH कसे तपासावे?', 'आच्छादन पिके म्हणजे काय?', 'नायट्रोजनची कमतरता कशी दूर करावी?'],
-    crop:     ['काळ्या मातीत कोणते पीक चांगले?', 'उन्हाळ्यात काय पेरावे?', 'पीक बदल कसे ठरवावे?'],
-    default:  ['सेंद्रिय शेतीबद्दल सांगा', 'सेंद्रिय शेती कशी सुरू करावी?', 'जीवामृत म्हणजे काय?'],
-  }
-};
-
-/* ══════════════════════════════════════════════════
-   HELPERS
-══════════════════════════════════════════════════ */
-function s(key) {
-  return (CHAT_STRINGS[chatLang] || CHAT_STRINGS.en)[key] || CHAT_STRINGS.en[key] || key;
-}
-
-function now() {
-  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function pickFollowUps(text) {
-  const t = text.toLowerCase();
-  const lang = chatLang;
-  const pool = FOLLOW_UPS[lang] || FOLLOW_UPS.en;
-  if (t.includes('pest') || t.includes('कीट') || t.includes('कीड')) return pool.pest;
-  if (t.includes('fertil') || t.includes('jeevam') || t.includes('जीवा') || t.includes('खाद')) return pool.fertiliz;
-  if (t.includes('disease') || t.includes('रोग') || t.includes('रोग')) return pool.disease;
-  if (t.includes('water') || t.includes('irrigat') || t.includes('पानी') || t.includes('पाणी')) return pool.water;
-  if (t.includes('soil') || t.includes('मिट्टी') || t.includes('माती')) return pool.soil;
-  if (t.includes('crop') || t.includes('फसल') || t.includes('पीक')) return pool.crop;
-  return pool.default;
-}
-
-/* Convert Markdown-like text to HTML */
-function markdownToHtml(text) {
-  return text
-    // Headers
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm,  '<h3>$1</h3>')
-    // Bold & italic
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g,    '<em>$1</em>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Bullet list
-    .replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>')
-    // Numbered list
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    // Blockquote
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    // Horizontal rule
-    .replace(/^---+$/gm, '<hr class="divider">')
-    // Wrap consecutive <li> in <ul>
-    .replace(/(<li>.*<\/li>\n?)+/gs, (m) => `<ul>${m}</ul>`)
-    // Line breaks
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br>')
-    // Wrap in paragraph if needed
-    .replace(/^(?!<[hupb])/, '<p>')
-    .replace(/([^>])$/, '$1</p>');
-}
-
-function getUserInitial() {
-  const name = "{{ current_user.name }}";
-  return name ? name[0].toUpperCase() : 'U';
-}
-
-/* ══════════════════════════════════════════════════
-   INPUT HANDLING
-══════════════════════════════════════════════════ */
-function onInputChange() {
-  const input = document.getElementById('chatInput');
-  const count = document.getElementById('charCount');
-  const send  = document.getElementById('sendBtn');
-  const len   = input.value.length;
-
-  count.textContent = `${len}/500`;
-  count.classList.toggle('warn', len > 450);
-
-  send.classList.toggle('active', len > 0);
-
-  // Auto-resize textarea
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 130) + 'px';
-}
-
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-}
-
-/* ══════════════════════════════════════════════════
-   SEND MESSAGE
-══════════════════════════════════════════════════ */
-async function sendMessage() {
-  const input    = document.getElementById('chatInput');
-  const question = input.value.trim();
-  if (!question) return;
-
-  // Hide welcome card on first message
-  if (conversationCount === 0) {
-    const wc = document.getElementById('welcomeCard');
-    if (wc) { wc.style.opacity = '0'; wc.style.transition = '0.3s'; setTimeout(() => wc.remove(), 300); }
-    document.getElementById('quickChips').style.display = 'none';
-  }
-  conversationCount++;
-
-  // Append user bubble
-  appendUserMsg(question);
-  input.value = '';
-  input.style.height = 'auto';
-  document.getElementById('charCount').textContent = '0/500';
-  document.getElementById('sendBtn').classList.remove('active');
-
-  // Typing indicator
-  const typingEl = appendTyping();
-
-  try {
-    const res  = await fetch('{{ url_for("chatbot.ask") }}', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ question, lang: chatLang })
-    });
-    const data = await res.json();
-    typingEl.remove();
-    appendBotMsg(data.answer, data.source || 'fallback', question);
-  } catch(err) {
-    typingEl.remove();
-    appendBotMsg(s('errorMsg'), 'error', question);
-  }
-}
-
-function sendQuick(text) {
-  document.getElementById('chatInput').value = text;
-  onInputChange();
-  sendMessage();
-}
-
-/* ══════════════════════════════════════════════════
-   APPEND MESSAGES
-══════════════════════════════════════════════════ */
-function appendUserMsg(text) {
-  const win = document.getElementById('chatWindow');
-  const row = document.createElement('div');
-  row.className = 'msg-row user-row';
-  row.innerHTML = `
-    <div class="msg-avatar user">${getUserInitial()}</div>
-    <div class="msg-content">
-      <div class="bubble user-bubble">${escapeHtml(text)}</div>
-      <div class="msg-meta">
-        <span class="msg-time">${now()}</span>
-      </div>
-    </div>`;
-  win.appendChild(row);
-  scrollBottom();
-}
-
-function appendBotMsg(text, source, questionText) {
-  const win  = document.getElementById('chatWindow');
-  const msgId = 'msg-' + Date.now();
-  const srcLabel = source === 'gemini' ? s('geminiSrc') : source === 'error' ? s('errorSrc') : s('localSrc');
-  const html = markdownToHtml(text);
-
-  const row = document.createElement('div');
-  row.className = 'msg-row bot-row';
-  row.innerHTML = `
-    <div class="msg-avatar bot">🌿</div>
-    <div class="msg-content">
-      <div class="bubble bot-bubble" id="${msgId}">${html}</div>
-      <div class="msg-meta">
-        <span class="msg-time">${now()}</span>
-        <span class="msg-source-badge">${srcLabel}</span>
-        <button class="copy-btn" onclick="copyMsg('${msgId}', this)">${s('copy')}</button>
-      </div>
-    </div>`;
-  win.appendChild(row);
-
-  // Follow-up suggestions
-  const chips = pickFollowUps(questionText || text);
-  if (chips && chips.length) {
-    const sugRow = document.createElement('div');
-    sugRow.className = 'suggestions-row';
-    sugRow.innerHTML = chips.slice(0,3).map(c =>
-      `<span class="suggest-chip" onclick="sendQuick(${JSON.stringify(c)})">↗ ${c}</span>`
-    ).join('');
-    win.appendChild(sugRow);
-  }
-
-  scrollBottom();
-}
-
-function appendTyping() {
-  const win = document.getElementById('chatWindow');
-  const row = document.createElement('div');
-  row.className = 'msg-row bot-row';
-  row.innerHTML = `
-    <div class="msg-avatar bot">🌿</div>
-    <div class="msg-content">
-      <div class="bubble bot-bubble">
-        <div class="typing-wrap">
-          <span></span><span></span><span></span>
-          <span class="typing-label">${s('thinking')}</span>
-        </div>
-      </div>
-    </div>`;
-  win.appendChild(row);
-  scrollBottom();
-  return row;
-}
-
-function scrollBottom() {
-  const win = document.getElementById('chatWindow');
-  win.scrollTop = win.scrollHeight;
-}
-
-/* ══════════════════════════════════════════════════
-   COPY
-══════════════════════════════════════════════════ */
-function copyMsg(id, btn) {
-  const el  = document.getElementById(id);
-  const txt = el ? el.innerText : '';
-  navigator.clipboard.writeText(txt).then(() => {
-    btn.textContent = s('copied');
-    btn.style.color = '#2ed573';
-    setTimeout(() => { btn.textContent = s('copy'); btn.style.color = ''; }, 2000);
-  });
-}
-
-function escapeHtml(t) {
-  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-/* ══════════════════════════════════════════════════
-   CLEAR CHAT
-══════════════════════════════════════════════════ */
-function clearChat() {
-  if (!confirm(s('clearConfirm'))) return;
-  const win = document.getElementById('chatWindow');
-  win.innerHTML = '';
-  conversationCount = 0;
-
-  // Re-add welcome card
-  const wc = document.createElement('div');
-  wc.className = 'welcome-card';
-  wc.id = 'welcomeCard';
-  wc.innerHTML = document.querySelector('.capability-grid')?.outerHTML || '';
-  // Simpler: just reload
-  location.reload();
-}
-
-/* ══════════════════════════════════════════════════
-   CHAT LANGUAGE (independent of UI language)
-══════════════════════════════════════════════════ */
-function setChatLang(lang) {
-  chatLang = lang;
-  document.querySelectorAll('.lang-pill').forEach((p, i) => {
-    p.classList.toggle('active', ['en','hi','mr'][i] === lang);
-  });
-  // Update voice recognition lang if active
-  if (voiceRecognition) voiceRecognition.lang = lang === 'hi' ? 'hi-IN' : lang === 'mr' ? 'mr-IN' : 'en-IN';
-}
-
-/* ══════════════════════════════════════════════════
-   VOICE INPUT
-══════════════════════════════════════════════════ */
-function toggleVoice() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { alert('Voice input not supported. Please use Chrome or Edge.'); return; }
-
-  const btn  = document.getElementById('voiceBtn');
-  const icon = document.getElementById('voiceIcon');
-  const inp  = document.getElementById('chatInput');
-
-  if (isListening && voiceRecognition) { voiceRecognition.stop(); return; }
-
-  voiceRecognition = new SR();
-  voiceRecognition.continuous    = false;
-  voiceRecognition.interimResults = true;
-  voiceRecognition.lang = chatLang === 'hi' ? 'hi-IN' : chatLang === 'mr' ? 'mr-IN' : 'en-IN';
-
-  voiceRecognition.onstart = () => {
-    isListening = true;
-    btn.classList.add('listening');
-    icon.className = 'bi bi-mic-mute';
-    inp.placeholder = s('voiceListen');
-    inp.value = '';
-  };
-
-  voiceRecognition.onresult = (e) => {
-    const interim = Array.from(e.results).map(r => r[0].transcript).join('');
-    inp.value = interim;
-    onInputChange();
-    if (e.results[e.results.length - 1].isFinal) {
-      voiceRecognition.stop();
+(() => {
+  'use strict';
+  const CHAT_COPY = {
+    en: {
+      heading: 'Farming assistant', subtitle: 'Practical guidance, in your language.', language: 'Language', topics: 'Start with a topic',
+      context: 'For tailored advice, include your crop, village, growth stage and the problem you noticed.', conversation: 'Your conversation', clear: 'Clear', question: 'Your farming question',
+      placeholder: 'Ask about your crop, soil or water…', voice: 'Speak', stopVoice: 'Stop listening', send: 'Send question', keyboard: 'Press Enter to send. Use Shift + Enter for a new line. Failed messages stay in the box.',
+      disclaimer: 'This assistant provides general information, not a diagnosis. Verify important decisions with your local Krishi Vigyan Kendra (KVK).',
+      localMode: 'Local topic guide · no AI connection needed', aiMode: 'AI assistance enabled · local guide available',
+      welcome: 'Welcome! Choose a topic or describe your farming question. Local guidance covers soil, irrigation, crop planning, nutrients, pests and diseases.',
+      you: 'You', assistant: 'Farming assistant', localSource: 'Local topic guide', aiSource: 'AI-generated guidance',
+      waiting: 'Preparing an answer…', error: 'Your message was not sent. Check your connection and try again; your question is still in the box.',
+      invalid: 'Please enter a question of up to 500 characters.', voiceError: 'Voice input is unavailable. You can type your question.', listening: 'Listening… review the text before sending.',
+      topicNames: ['Soil health', 'Water management', 'Pests and diseases', 'Nutrients and compost', 'Crop planning', 'Weather decisions'],
+      prompts: ['How can I improve soil health?', 'How should I plan irrigation?', 'What should I check before treating pests or disease?', 'How can I plan compost and fertilizer use?', 'What should I consider when selecting a crop?', 'How can I use a local weather forecast for field work?']
+    },
+    hi: {
+      heading: 'कृषि सहायक', subtitle: 'आपकी भाषा में खेती की उपयोगी जानकारी।', language: 'भाषा', topics: 'विषय चुनकर शुरू करें',
+      context: 'व्यक्तिगत सलाह के लिए फसल, गाँव, फसल की अवस्था और समस्या बताएँ।', conversation: 'आपकी बातचीत', clear: 'साफ करें', question: 'आपका खेती का प्रश्न',
+      placeholder: 'फसल, मिट्टी या पानी के बारे में पूछें…', voice: 'बोलें', stopVoice: 'सुनना बंद करें', send: 'प्रश्न भेजें', keyboard: 'भेजने के लिए Enter दबाएँ। नई पंक्ति के लिए Shift + Enter दबाएँ। न भेजा गया प्रश्न बॉक्स में रहेगा।',
+      disclaimer: 'यह सहायक सामान्य जानकारी देता है, रोग का निदान नहीं। महत्वपूर्ण निर्णय स्थानीय कृषि विज्ञान केंद्र (KVK) से जाँचें।',
+      localMode: 'स्थानीय विषय मार्गदर्शिका · AI कनेक्शन जरूरी नहीं', aiMode: 'AI सहायता चालू · स्थानीय मार्गदर्शिका भी उपलब्ध',
+      welcome: 'नमस्कार! विषय चुनें या खेती का प्रश्न लिखें। स्थानीय मार्गदर्शिका में मिट्टी, सिंचाई, फसल, खाद, कीट और रोग की जानकारी है।',
+      you: 'आप', assistant: 'कृषि सहायक', localSource: 'स्थानीय विषय मार्गदर्शिका', aiSource: 'AI की जानकारी',
+      waiting: 'उत्तर तैयार हो रहा है…', error: 'प्रश्न नहीं भेजा गया। कनेक्शन जाँचकर फिर प्रयास करें; आपका प्रश्न बॉक्स में है।',
+      invalid: 'कृपया 500 अक्षरों तक का प्रश्न लिखें।', voiceError: 'आवाज से लिखना उपलब्ध नहीं है। प्रश्न टाइप कर सकते हैं।', listening: 'सुन रहे हैं… भेजने से पहले लिखे हुए शब्द जाँचें।',
+      topicNames: ['मिट्टी का स्वास्थ्य', 'पानी का प्रबंधन', 'कीट और रोग', 'खाद और पोषण', 'फसल नियोजन', 'मौसम के अनुसार काम'],
+      prompts: ['मिट्टी का स्वास्थ्य कैसे सुधारें?', 'सिंचाई की योजना कैसे बनाएँ?', 'कीट या रोग का उपचार करने से पहले क्या जाँचें?', 'खाद और कंपोस्ट का उपयोग कैसे तय करें?', 'फसल चुनते समय क्या देखें?', 'खेत के काम में मौसम के अनुमान का उपयोग कैसे करें?']
+    },
+    mr: {
+      heading: 'शेती सहायक', subtitle: 'तुमच्या भाषेत शेतीची उपयोगी माहिती.', language: 'भाषा', topics: 'विषय निवडून सुरुवात करा',
+      context: 'वैयक्तिक सल्ल्यासाठी पीक, गाव, पिकाची अवस्था आणि दिसलेली समस्या सांगा.', conversation: 'तुमचा संवाद', clear: 'साफ करा', question: 'तुमचा शेतीविषयक प्रश्न',
+      placeholder: 'पीक, माती किंवा पाण्याबद्दल विचारा…', voice: 'बोला', stopVoice: 'ऐकणे थांबवा', send: 'प्रश्न पाठवा', keyboard: 'पाठवण्यासाठी Enter दाबा. नवीन ओळीसाठी Shift + Enter वापरा. न पाठवलेला प्रश्न चौकटीत राहील.',
+      disclaimer: 'हा सहायक सामान्य माहिती देतो, रोगाचे निदान नाही. महत्त्वाचे निर्णय स्थानिक कृषी विज्ञान केंद्राकडून (KVK) तपासून घ्या.',
+      localMode: 'स्थानिक विषय मार्गदर्शिका · AI जोडणी आवश्यक नाही', aiMode: 'AI सहाय्य सुरू · स्थानिक मार्गदर्शिकाही उपलब्ध',
+      welcome: 'नमस्कार! विषय निवडा किंवा शेतीचा प्रश्न लिहा. स्थानिक मार्गदर्शिकेत माती, सिंचन, पीक नियोजन, खत, कीड आणि रोग यांची माहिती आहे.',
+      you: 'तुम्ही', assistant: 'शेती सहायक', localSource: 'स्थानिक विषय मार्गदर्शिका', aiSource: 'AI ने दिलेली माहिती',
+      waiting: 'उत्तर तयार होत आहे…', error: 'प्रश्न पाठवला गेला नाही. जोडणी तपासून पुन्हा प्रयत्न करा; तुमचा प्रश्न चौकटीत आहे.',
+      invalid: 'कृपया 500 अक्षरांपर्यंतचा प्रश्न लिहा.', voiceError: 'आवाजाने लिहिण्याची सुविधा उपलब्ध नाही. प्रश्न टाइप करू शकता.', listening: 'ऐकत आहे… पाठवण्यापूर्वी मजकूर तपासा.',
+      topicNames: ['मातीचे आरोग्य', 'पाणी व्यवस्थापन', 'कीड आणि रोग', 'खत आणि अन्नद्रव्ये', 'पीक नियोजन', 'हवामानानुसार काम'],
+      prompts: ['मातीचे आरोग्य कसे सुधारावे?', 'सिंचनाचे नियोजन कसे करावे?', 'कीड किंवा रोगावरील उपचारापूर्वी काय तपासावे?', 'खत आणि कंपोस्टचा वापर कसा ठरवावा?', 'पीक निवडताना कोणत्या गोष्टी पाहाव्यात?', 'शेतातील कामासाठी हवामानाचा अंदाज कसा वापरावा?']
     }
   };
+  document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('chatInput');
+    const form = document.getElementById('chatForm');
+    const log = document.getElementById('chatWindow');
+    const send = document.getElementById('sendButton');
+    const status = document.getElementById('chatStatus');
+    const language = document.getElementById('chatLanguage');
+    const voiceButton = document.getElementById('voiceButton');
+    const draftKey = 'krishi_chat_draft_' + {{ current_user.id|tojson }};
+    const aiEnabled = {{ gemini_active|tojson }};
+    let lang = typeof I18n !== 'undefined' ? I18n.getLang() : 'en';
+    let sending = false;
+    let recognition = null;
+    let listening = false;
+    const copy = () => CHAT_COPY[lang] || CHAT_COPY.en;
+    const saveDraft = () => { try { sessionStorage.setItem(draftKey, input.value); } catch (_) {} };
+    const updateCount = () => { document.getElementById('charCount').textContent = input.value.length + ' / 500'; saveDraft(); };
 
-  voiceRecognition.onerror  = stopVoice;
-  voiceRecognition.onend    = stopVoice;
-  voiceRecognition.start();
-}
+    function message(text, user = false, source = '', notice = '') {
+      const article = document.createElement('article');
+      article.className = 'chat-message' + (user ? ' is-user' : '');
+      const heading = document.createElement('strong');
+      heading.className = 'small';
+      heading.textContent = user ? copy().you : copy().assistant;
+      const body = document.createElement('p');
+      body.className = 'message-text';
+      // Provider output and user input are data. Never parse them as HTML.
+      body.textContent = String(text);
+      article.append(heading, body);
+      if (source || notice) {
+        const meta = document.createElement('p');
+        meta.className = 'chat-notice mt-2 mb-0';
+        meta.textContent = (source === 'gemini' ? copy().aiSource : copy().localSource) + (notice ? ' · ' + notice : '');
+        article.append(meta);
+      }
+      log.append(article);
+      log.scrollTop = log.scrollHeight;
+      return article;
+    }
 
-function stopVoice() {
-  isListening = false;
-  const btn  = document.getElementById('voiceBtn');
-  const icon = document.getElementById('voiceIcon');
-  const inp  = document.getElementById('chatInput');
-  btn.classList.remove('listening');
-  icon.className = 'bi bi-mic';
-  if (typeof I18n !== 'undefined') I18n.apply(inp.parentElement);
-  onInputChange();
-}
+    function applyLanguage(next) {
+      lang = Object.hasOwn(CHAT_COPY, next) ? next : 'en';
+      language.value = lang;
+      document.querySelectorAll('[data-chat]').forEach(el => { el.textContent = copy()[el.dataset.chat] || ''; });
+      input.placeholder = copy().placeholder;
+      document.getElementById('chatMode').textContent = aiEnabled ? copy().aiMode : copy().localMode;
+      const topics = document.getElementById('chatTopics');
+      topics.replaceChildren();
+      copy().topicNames.forEach((name, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-outline-success topic-button';
+        button.textContent = name;
+        button.addEventListener('click', () => { input.value = copy().prompts[index]; updateCount(); input.focus(); });
+        topics.append(button);
+      });
+      const welcome = log.querySelector('[data-welcome]');
+      if (welcome) {
+        welcome.querySelector('strong').textContent = copy().assistant;
+        welcome.querySelector('.message-text').textContent = copy().welcome;
+      }
+      if (sending) status.textContent = copy().waiting;
+      if (recognition && listening) recognition.stop();
+    }
 
-/* ══════════════════════════════════════════════════
-   INIT
-══════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
-  // Sync lang pill state with global i18n
-  const currentLang = typeof I18n !== 'undefined' && I18n.getLang ? I18n.getLang() : 'en';
-  setChatLang(currentLang);
-});
+    async function submitQuestion(event) {
+      event.preventDefault();
+      if (sending) return;
+      const question = input.value.trim();
+      if (!question || question.length > 500) { status.textContent = copy().invalid; input.focus(); return; }
+      const requestLang = lang;
+      sending = true;
+      send.disabled = true;
+      status.textContent = copy().waiting;
+      form.setAttribute('aria-busy', 'true');
+      const pendingMessage = message(question, true);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 22000);
+      try {
+        const response = await fetch({{ url_for('chatbot.ask')|tojson }}, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({question, lang: requestLang}), signal: controller.signal
+        });
+        const data = await response.json();
+        if (!response.ok || typeof data.answer !== 'string') throw new Error('Request failed');
+        message(data.answer, false, data.source || 'fallback', typeof data.notice === 'string' ? data.notice : '');
+        if (input.value.trim() === question) input.value = '';
+        updateCount();
+        status.textContent = '';
+      } catch (_) {
+        pendingMessage.remove();
+        status.textContent = copy().error;
+        saveDraft();
+      } finally {
+        clearTimeout(timer);
+        sending = false;
+        send.disabled = false;
+        form.removeAttribute('aria-busy');
+      }
+    }
+
+    input.addEventListener('input', updateCount);
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+        event.preventDefault(); form.requestSubmit();
+      }
+    });
+    form.addEventListener('submit', submitQuestion);
+    language.addEventListener('change', () => {
+      if (typeof I18n !== 'undefined') I18n.setLang(language.value);
+      else applyLanguage(language.value);
+    });
+    document.getElementById('clearChat').addEventListener('click', () => {
+      if (sending) return;
+      log.replaceChildren();
+      message(copy().welcome).dataset.welcome = 'true';
+      status.textContent = '';
+    });
+    if (typeof I18n !== 'undefined') I18n.onLangChange(applyLanguage);
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      voiceButton.hidden = false;
+      voiceButton.addEventListener('click', () => {
+        if (listening && recognition) { recognition.stop(); return; }
+        recognition = new SpeechRecognition();
+        recognition.lang = {en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN'}[lang];
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.onstart = () => { listening = true; voiceButton.textContent = copy().stopVoice; status.textContent = copy().listening; };
+        recognition.onresult = event => { input.value = event.results[0][0].transcript.slice(0, 500); updateCount(); input.focus(); };
+        recognition.onerror = () => { status.textContent = copy().voiceError; };
+        recognition.onend = () => { listening = false; voiceButton.textContent = copy().voice; };
+        try { recognition.start(); } catch (_) { status.textContent = copy().voiceError; }
+      });
+    }
+    try { input.value = (sessionStorage.getItem(draftKey) || '').slice(0, 500); } catch (_) {}
+    applyLanguage(lang);
+    message(copy().welcome).dataset.welcome = 'true';
+    updateCount();
+  });
+})();
 </script>
 {% endblock %}

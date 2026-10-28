@@ -1,89 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Buyer Dashboard — KrishiAI{% endblock %}
-
+{% block title %}My marketplace — Dharti Rakshak{% endblock %}
 {% block content %}
 <div class="container">
-
-  <!-- Welcome -->
-  <div class="mb-4">
-    <h2 class="fw-bold text-success mb-1">
-      <i class="bi bi-house-heart me-2"></i><span data-i18n="buyer_dash_heading">Buyer Dashboard</span>
-    </h2>
-    <p class="text-muted mb-0"><span data-i18n="buyer_dash_welcome">Welcome</span>, {{ current_user.name }} 🛒 <span data-i18n="buyer_dash_subtitle">Find fresh organic produce from local farmers.</span></p>
-  </div>
-
-  <!-- Quick Links -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-4">
-      <a href="{{ url_for('marketplace.listing') }}" class="card text-decoration-none hover-card h-100">
-        <div class="card-body text-center py-4">
-          <div class="fs-1">🛒</div>
-          <div class="fw-bold text-success mt-2" data-i18n="buyer_dash_browse">Browse Marketplace</div>
-          <small class="text-muted" data-i18n="buyer_dash_browse_desc">Find organic products</small>
-        </div>
-      </a>
-    </div>
-    <div class="col-md-4">
-      <a href="{{ url_for('chatbot.chat') }}" class="card text-decoration-none hover-card h-100">
-        <div class="card-body text-center py-4">
-          <div class="fs-1">💬</div>
-          <div class="fw-bold text-success mt-2" data-i18n="buyer_dash_ai_advisor">Ask AI Advisor</div>
-          <small class="text-muted" data-i18n="buyer_dash_ai_desc">Farming & buying advice</small>
-        </div>
-      </a>
-    </div>
-    <div class="col-md-4">
-      <a href="{{ url_for('analytics.dashboard') }}" class="card text-decoration-none hover-card h-100">
-        <div class="card-body text-center py-4">
-          <div class="fs-1">📊</div>
-          <div class="fw-bold text-success mt-2" data-i18n="buyer_dash_analytics">Market Analytics</div>
-          <small class="text-muted" data-i18n="buyer_dash_analytics_desc">Price trends & insights</small>
-        </div>
-      </a>
-    </div>
-  </div>
-
-  <!-- Latest Products -->
-  <h5 class="fw-semibold mb-3" data-i18n="buyer_dash_latest">Latest Products in Market</h5>
-  {% if products %}
-    <div class="row g-3">
-      {% for p in products %}
-      <div class="col-md-4">
-        <div class="card product-card h-100">
-          {% if p.image_filename %}
-            <img src="/static/uploads/{{ p.image_filename }}" class="card-img-top product-img"
-                 alt="{{ p.name }}" />
-          {% else %}
-            <div class="product-img-placeholder"><span>🌿</span></div>
-          {% endif %}
-          <div class="card-body">
-            <h6 class="card-title fw-bold">{{ p.name }}</h6>
-            <p class="text-success fw-semibold">₹{{ p.price }}/unit</p>
-            <p class="text-muted small mb-1">Qty: {{ p.quantity }}</p>
-            {% if p.category %}
-              <span class="badge bg-success">{{ p.category }}</span>
-            {% endif %}
-            <p class="small text-muted mt-2"><span data-i18n="market_by">By</span>: <strong>{{ p.farmer.name }}</strong></p>
-            <a href="{{ url_for('marketplace.farmer_detail', farmer_id=p.farmer_id) }}"
-               class="btn btn-outline-success btn-sm w-100" data-i18n="buyer_dash_contact_farmer">
-              <i class="bi bi-person me-1"></i>Contact Farmer
-            </a>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    <div class="text-center mt-3">
-      <a href="{{ url_for('marketplace.listing') }}" class="btn btn-success" data-i18n="buyer_dash_view_all">
-        <i class="bi bi-shop me-1"></i>View All Products
-      </a>
-    </div>
-  {% else %}
-    <div class="alert alert-info" data-i18n="buyer_dash_no_products">
-      <i class="bi bi-info-circle me-1"></i>
-      No products listed yet. Check back soon!
-    </div>
-  {% endif %}
-
+  <header class="page-header"><div><p class="eyebrow" data-i18n="dash_buyer_eyebrow">Good food. Local connections.</p><h1><span data-i18n="buyer_dash_welcome">Welcome</span>, {{ current_user.name }}</h1><p data-i18n="dash_buyer_intro">Find local produce and keep your orders in one place.</p></div><a class="btn btn-success" href="{{ url_for('marketplace.listing') }}"><i class="bi bi-basket2" aria-hidden="true"></i><span data-i18n="buyer_dash_browse">Browse marketplace</span></a></header>
+  <section class="task-grid" aria-label="Shopping actions" data-i18n-aria="dash_shopping_actions">
+    <a class="task-card task-card-featured" href="{{ url_for('marketplace.listing') }}"><span class="task-icon"><i class="bi bi-shop" aria-hidden="true"></i></span><h2 class="h5" data-i18n="buyer_dash_browse">Browse marketplace</h2><p data-i18n="dash_browse_desc">Compare listings and check the price and unit before ordering.</p><span class="task-link" data-i18n="home_browse_market">Explore the market</span></a>
+    <a class="task-card" href="{{ url_for('cart.view_cart') }}"><span class="task-icon icon-peach"><i class="bi bi-cart3" aria-hidden="true"></i></span><h2 class="h5" data-i18n="cart_heading">My cart</h2><p data-i18n="dash_cart_desc">Review your quantities and delivery details before checkout.</p><span class="task-link" data-i18n="dash_open_cart">Review my cart</span></a>
+    <a class="task-card" href="{{ url_for('orders.buyer_orders') }}"><span class="task-icon icon-blue"><i class="bi bi-box-seam" aria-hidden="true"></i></span><h2 class="h5" data-i18n="nav_my_orders">My orders</h2><p data-i18n="dash_buyer_orders_desc">Follow order acceptance and delivery. Rate an order after it arrives.</p><span class="task-link" data-i18n="dash_track_orders">Track my orders</span></a>
+  </section>
+  <section class="dashboard-section" aria-labelledby="latest-produce-heading"><div class="section-heading"><h2 id="latest-produce-heading" data-i18n="buyer_dash_latest">Fresh from the marketplace</h2><a href="{{ url_for('marketplace.listing') }}" data-i18n="buyer_dash_view_all">View all products</a></div>
+    {% if products %}<div class="row g-3">{% for product in products %}<div class="col-sm-6 col-lg-4"><article class="card product-card h-100">
+      {% if product.image_filename %}<img src="{{ url_for('static', filename='uploads/' + product.image_filename) }}" class="product-img" alt="{{ product.name }}" width="400" height="190" loading="lazy">{% else %}<div class="product-img-placeholder" aria-hidden="true"><i class="bi bi-flower2"></i></div>{% endif %}
+      <div class="card-body"><h3 class="h5">{{ product.name }}</h3><p class="text-success fw-semibold mb-1">₹{{ '%.2f'|format(product.price) }} / {{ product.stock_unit }}</p><p class="text-muted small"><span data-i18n="commerce_available">Available</span>: {{ product.quantity }}</p><p class="small text-muted"><span data-i18n="market_by">By</span> {{ product.farmer.name }}</p><a class="btn btn-outline-success" href="{{ url_for('marketplace.farmer_detail', farmer_id=product.farmer_id) }}" data-i18n="buyer_dash_contact_farmer">View farmer</a></div>
+    </article></div>{% endfor %}</div>
+    {% else %}<div class="empty-state"><i class="bi bi-basket2" aria-hidden="true"></i><h3 class="h5" data-i18n="dash_market_empty">The marketplace is just getting started</h3><p data-i18n="buyer_dash_no_products">There are no listings yet. Come back to see produce added by farmers.</p><a class="btn btn-outline-success" href="{{ url_for('roadmap.index') }}" data-i18n="home_guides_action">Explore crop guides</a></div>{% endif %}
+  </section>
 </div>
 {% endblock %}

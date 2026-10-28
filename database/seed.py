@@ -12,9 +12,9 @@ Run once:  python database/seed.py
 import sys, os, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from app import create_app
 from models import db, User, FarmerProfile, BuyerProfile, CropRoadmap
 from werkzeug.security import generate_password_hash
+from sqlalchemy.exc import IntegrityError
 
 # App will be created inside __main__ context or passed by caller.
 
@@ -619,6 +619,40 @@ CROPS = [
 ]
 
 
+def seed_roadmaps():
+    """Populate educational guides only; never create demo accounts on startup."""
+    seeded_count = 0
+    for crop_data in CROPS:
+        existing = CropRoadmap.query.filter_by(slug=crop_data['slug']).first()
+        if not existing:
+            stages_json = json.dumps(crop_data.get('stages', []))
+            crop = CropRoadmap(
+                crop_name      = crop_data['crop_name'],
+                slug           = crop_data['slug'],
+                emoji          = crop_data['emoji'],
+                description    = crop_data['description'],
+                season         = crop_data['season'],
+                duration_days  = crop_data['duration_days'],
+                expected_yield = crop_data['expected_yield'],
+                soil_type      = crop_data['soil_type'],
+                climate        = crop_data['climate'],
+                stages_json    = stages_json
+            )
+            db.session.add(crop)
+            seeded_count += 1
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Two workers may seed a fresh database together. The unique slug is
+        # authoritative; another completed seeder is safe to reuse.
+        db.session.rollback()
+        if all(CropRoadmap.query.filter_by(slug=crop['slug']).first() for crop in CROPS):
+            return 0
+        raise
+    return seeded_count
+
+
 def seed_database():
     db.create_all()
 
@@ -660,33 +694,7 @@ def seed_database():
 
     db.session.commit()
 
-    # ---- Seed Crop Roadmaps ----
-    seeded_count = 0
-    for crop_data in CROPS:
-        existing = CropRoadmap.query.filter_by(slug=crop_data['slug']).first()
-        if not existing:
-            stages_json = json.dumps(crop_data.get('stages', []))
-            crop = CropRoadmap(
-                crop_name      = crop_data['crop_name'],
-                slug           = crop_data['slug'],
-                emoji          = crop_data['emoji'],
-                description    = crop_data['description'],
-                season         = crop_data['season'],
-                duration_days  = crop_data['duration_days'],
-                expected_yield = crop_data['expected_yield'],
-                soil_type      = crop_data['soil_type'],
-                climate        = crop_data['climate'],
-                stages_json    = stages_json
-            )
-            db.session.add(crop)
-            seeded_count += 1
-            print(f'[OK] Crop roadmap: {crop_data["crop_name"]}')
-
-    db.session.commit()
-    if seeded_count:
-        print(f'\n[OK] {seeded_count} crop roadmaps seeded successfully!')
-    else:
-        print('[INFO] Crop roadmaps already exist — skipped.')
+    seed_roadmaps()
 
     print('\n[OK] Database seeded successfully!')
     print('\nTest Credentials:')
@@ -694,6 +702,9 @@ def seed_database():
     print('  Buyer:  buyer@test.com   / 123456')
 
 if __name__ == '__main__':
+    from app import create_app
+    if os.environ.get('APP_ENV') == 'production':
+        raise SystemExit('Demo accounts cannot be seeded in production.')
     app = create_app()
     with app.app_context():
         seed_database()

@@ -14,55 +14,53 @@
         <div class="card-body p-4">
           <form method="POST" action="{{ url_for('marketplace.add_product') }}"
                 enctype="multipart/form-data" id="addProductForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div class="mb-3">
               <label for="name" class="form-label fw-semibold" data-i18n="add_product_name_label">Product Name *</label>
-              <input type="text" class="form-control" id="name" name="name"
+              <input type="text" class="form-control" id="name" name="name" maxlength="100"
                      data-i18n-placeholder="add_product_name_ph"
-                     placeholder="e.g. Organic Tomatoes" required />
+                     placeholder="e.g. Organic Tomatoes" value="{{ request.form.get('name', '') }}" required />
             </div>
 
             <div class="row g-3 mb-3">
               <div class="col-md-6">
                 <label for="price" class="form-label fw-semibold" data-i18n="add_product_price_label">Price (₹ per unit) *</label>
                 <input type="number" class="form-control" id="price" name="price"
-                       placeholder="e.g. 40" min="0" step="0.01" required />
+                       value="{{ request.form.get('price', '') }}" placeholder="e.g. 40" min="0.01" max="1000000" step="0.01" required />
               </div>
               <div class="col-md-6">
                 <label for="quantity" class="form-label fw-semibold" data-i18n="add_product_qty_label">Available Quantity *</label>
-                <input type="text" class="form-control" id="quantity" name="quantity"
+                <input type="text" class="form-control" id="quantity" name="quantity" maxlength="50" aria-describedby="stock-help"
                        data-i18n-placeholder="add_product_qty_ph"
-                       placeholder="e.g. 100 kg" required />
+                       value="{{ request.form.get('quantity', '') }}" placeholder="e.g. 100 kg" required />
               </div>
             </div>
 
+            <p id="stock-help" class="form-text" data-i18n="commerce_stock_help">Use a number and unit, such as 100 kg or 20 pieces. The price is for one of that unit. Orders use whole units.</p>
             <div class="mb-3">
               <label for="category" class="form-label fw-semibold" data-i18n="add_product_category_label">Category</label>
               <select class="form-select" id="category" name="category">
                 <option value="" data-i18n="add_product_category_ph">Select category</option>
-                <option>Vegetables</option>
-                <option>Fruits</option>
-                <option>Grains</option>
-                <option>Pulses</option>
-                <option>Spices</option>
-                <option>Dairy</option>
-                <option>Other</option>
+                {% for category in ['Vegetables','Fruits','Grains','Pulses','Spices','Dairy','Herbs','Seeds','Fertilizers','Other'] %}
+                <option value="{{ category }}" {% if request.form.get('category') == category %}selected{% endif %} data-i18n="commerce_category_{{ category|lower }}">{{ category }}</option>
+                {% endfor %}
               </select>
             </div>
 
             <div class="mb-3">
               <label for="description" class="form-label fw-semibold" data-i18n="add_product_desc_label">Description</label>
-              <textarea class="form-control" id="description" name="description"
+              <textarea class="form-control" id="description" name="description" maxlength="3000"
                         rows="3" data-i18n-placeholder="add_product_desc_ph"
-                        placeholder="Describe your product — growing method, freshness, etc."></textarea>
+                        placeholder="Describe your product — growing method, freshness, etc.">{{ request.form.get('description', '') }}</textarea>
             </div>
 
             <div class="mb-3">
               <label for="image" class="form-label fw-semibold" data-i18n="add_product_image_label">Product Image</label>
               <input type="file" class="form-control" id="image" name="image"
-                     accept="image/*" onchange="previewImage(event)" />
+                     accept="image/jpeg,image/png,image/webp" onchange="previewImage(event)" />
               <div id="imgPreview" class="mt-2" style="display:none">
-                <img id="previewEl" src="#" class="img-thumbnail" style="max-height:150px;" />
+                <img id="previewEl" src="#" alt="Product photo preview" class="img-thumbnail" style="max-height:150px;" />
               </div>
             </div>
 

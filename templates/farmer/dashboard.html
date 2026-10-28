@@ -1,167 +1,42 @@
 {% extends "base.html" %}
-{% block title %}Farmer Dashboard — KrishiAI{% endblock %}
-
+{% block title %}My farm — Dharti Rakshak{% endblock %}
 {% block content %}
 <div class="container">
-
-  <!-- Pending Orders Alert -->
-  {% if pending_orders and pending_orders > 0 %}
-  <div class="alert alert-warning d-flex align-items-center gap-3 mb-4" style="border-radius:14px;border:none;background:linear-gradient(135deg,#fff3cd,#ffe08a);box-shadow:0 2px 12px rgba(255,193,7,0.25);">
-    <span style="font-size:2rem;">📬</span>
-    <div>
-      <strong>You have {{ pending_orders }} <span data-i18n="farmer_dash_pending_orders">pending order</span>{{ 's' if pending_orders > 1 else '' }}!</strong>
-      <br><small class="text-muted">Buyers are waiting — please accept or reject promptly.</small>
-    </div>
-    <a href="{{ url_for('orders.farmer_orders') }}" class="btn btn-warning btn-sm ms-auto fw-bold" style="border-radius:10px;" data-i18n="farmer_dash_view_orders">
-      View Orders →
-    </a>
+  <header class="page-header">
+    <div><p class="eyebrow" data-i18n="dash_farm_eyebrow">Your farm, at a glance</p><h1><span data-i18n="farmer_dash_welcome">Welcome</span>, {{ current_user.name }}</h1><p data-i18n="dash_farm_intro">A clear view of your work, your produce and your orders.</p></div>
+    <a href="{{ url_for('marketplace.add_product') }}" class="btn btn-success"><i class="bi bi-plus-lg" aria-hidden="true"></i><span data-i18n="farmer_dash_add_product">Add product</span></a>
+  </header>
+  {% if pending_orders %}
+  <div class="alert alert-warning d-flex flex-wrap align-items-center gap-3">
+    <div class="flex-grow-1"><strong>{{ pending_orders }} <span data-i18n="dash_waiting_orders">orders need your attention</span></strong><br><span data-i18n="dash_waiting_note">Review the delivery details before accepting an order.</span></div>
+    <a href="{{ url_for('orders.farmer_orders') }}" class="btn btn-outline-success" data-i18n="farmer_dash_view_orders">View orders</a>
   </div>
   {% endif %}
-
-  <!-- Welcome -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h2 class="fw-bold text-success mb-1">
-        <i class="bi bi-house-heart me-2"></i><span data-i18n="farmer_dash_heading">Farmer Dashboard</span>
-      </h2>
-      <p class="text-muted mb-0"><span data-i18n="farmer_dash_welcome">Welcome</span>, {{ current_user.name }} 🌾</p>
+  <section class="dashboard-metrics" aria-label="Your marketplace activity" data-i18n-aria="dash_metrics_label">
+    <div class="metric-card"><strong class="stat-num">{{ products | length }}</strong><span class="metric-label" data-i18n="farmer_dash_my_products">My listings</span></div>
+    <div class="metric-card"><strong class="stat-num">{{ total_orders }}</strong><span class="metric-label" data-i18n="farmer_dash_total_orders">Total orders</span></div>
+    <div class="metric-card"><strong class="stat-num">{{ pending_orders }}</strong><span class="metric-label" data-i18n="farmer_dash_pending_orders">Pending orders</span></div>
+    <div class="metric-card"><strong class="stat-num">₹{{ '%.2f'|format(total_revenue) }}</strong><span class="metric-label" data-i18n="dash_delivered_value">Delivered order value</span></div>
+  </section>
+  <section aria-labelledby="farm-actions-heading">
+    <div class="section-heading"><h2 id="farm-actions-heading" data-i18n="dash_next_step">What is your next step?</h2></div>
+    <div class="task-grid dashboard-task-grid">
+      <a class="task-card task-card-featured" href="{{ url_for('farm_tools.index') }}"><span class="task-icon"><i class="bi bi-journal-check" aria-hidden="true"></i></span><h3 data-i18n="home_plan_title">Plan work & track money</h3><p data-i18n="dash_planner_desc">Keep tasks, due dates and farm expenses in your private notebook.</p><span class="task-link" data-i18n="home_plan_action">Open farm planner</span></a>
+      <a class="task-card" href="{{ url_for('marketplace.my_products') }}"><span class="task-icon icon-peach"><i class="bi bi-basket2" aria-hidden="true"></i></span><h3 data-i18n="dash_manage_produce">Manage my produce</h3><p data-i18n="dash_produce_desc">Keep available stock and prices up to date for buyers.</p><span class="task-link" data-i18n="farmer_dash_manage_all">Manage listings</span></a>
+      <a class="task-card" href="{{ url_for('orders.farmer_orders') }}"><span class="task-icon icon-yellow"><i class="bi bi-box-seam" aria-hidden="true"></i></span><h3 data-i18n="dash_manage_orders">Review my orders</h3><p data-i18n="dash_orders_desc">Accept requests and track each delivery from start to finish.</p><span class="task-link" data-i18n="farmer_dash_view_orders">View orders</span></a>
+      <a class="task-card" href="{{ url_for('roadmap.index') }}"><span class="task-icon icon-blue"><i class="bi bi-map" aria-hidden="true"></i></span><h3 data-i18n="home_guides_title">Find a growing guide</h3><p data-i18n="dash_guides_desc">Use step-by-step crop guides alongside local expert advice.</p><span class="task-link" data-i18n="home_guides_action">Explore crop guides</span></a>
     </div>
-    <a href="{{ url_for('marketplace.add_product') }}" class="btn btn-success" data-i18n="farmer_dash_add_product">
-      <i class="bi bi-plus-circle me-1"></i>Add Product
-    </a>
-  </div>
-
-  <!-- Quick Stats -->
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="card stat-card text-center">
-        <div class="card-body">
-          <div class="stat-num text-success">{{ products | length }}</div>
-          <div class="text-muted" data-i18n="farmer_dash_my_products">My Products</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card stat-card text-center">
-        <div class="card-body">
-          <div class="stat-num text-primary">{{ total_orders }}</div>
-          <div class="text-muted" data-i18n="farmer_dash_total_orders">Total Orders</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card stat-card text-center">
-        <div class="card-body">
-          <div class="stat-num text-warning">{{ roadmap_count }}</div>
-          <div class="text-muted" data-i18n="farmer_dash_roadmaps">Crop Roadmaps</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card stat-card text-center">
-        <div class="card-body">
-          <div class="stat-num text-danger">₹{{ total_revenue }}</div>
-          <div class="text-muted" data-i18n="farmer_dash_revenue">Revenue (Delivered)</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI Tools Quick Access -->
-  <h5 class="fw-semibold mb-3" data-i18n="farmer_dash_ai_tools">AI Tools for Farmers</h5>
-  <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <a href="{{ url_for('crop.recommend') }}" class="card text-decoration-none hover-card h-100">
-        <div class="card-body text-center py-3">
-          <div class="fs-2">🤖</div>
-          <div class="fw-semibold text-success" data-i18n="nav_crop_ai">Crop AI</div>
-          <small class="text-muted" data-i18n="farmer_dash_crop_ai_desc">Best crop for your soil</small>
-        </div>
-      </a>
-    </div>
-    <div class="col-md-3">
-      <a href="{{ url_for('disease.detect') }}" class="card text-decoration-none hover-card h-100">
-        <div class="card-body text-center py-3">
-          <div class="fs-2">🔬</div>
-          <div class="fw-semibold text-success" data-i18n="nav_disease">Disease Detect</div>
-          <small class="text-muted" data-i18n="farmer_dash_disease_desc">Upload leaf photo</small>
-        </div>
-      </a>
-    </div>
-    <div class="col-md-3">
-      <a href="{{ url_for('weather.advisory') }}" class="card text-decoration-none hover-card h-100">
-        <div class="card-body text-center py-3">
-          <div class="fs-2">🌦</div>
-          <div class="fw-semibold text-success" data-i18n="nav_weather">Weather</div>
-          <small class="text-muted" data-i18n="farmer_dash_weather_desc">Smart irrigation advice</small>
-        </div>
-      </a>
-    </div>
-    <div class="col-md-3">
-      <a href="{{ url_for('chatbot.chat') }}" class="card text-decoration-none hover-card h-100">
-        <div class="card-body text-center py-3">
-          <div class="fs-2">💬</div>
-          <div class="fw-semibold text-success" data-i18n="nav_chatbot">Chatbot</div>
-          <small class="text-muted" data-i18n="farmer_dash_chatbot_desc">Ask farming questions</small>
-        </div>
-      </a>
-    </div>
-  </div>
-
-  <!-- My Products Table -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="fw-semibold mb-0" data-i18n="farmer_dash_my_listings">My Product Listings</h5>
-    <a href="{{ url_for('marketplace.my_products') }}" class="btn btn-outline-success btn-sm" data-i18n="farmer_dash_manage_all">
-      Manage All
-    </a>
-  </div>
-
-  {% if products %}
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead class="table-success">
-          <tr>
-            <th data-i18n="farmer_dash_col_product">Product</th>
-            <th data-i18n="farmer_dash_col_category">Category</th>
-            <th data-i18n="farmer_dash_col_price">Price</th>
-            <th data-i18n="farmer_dash_col_quantity">Quantity</th>
-            <th data-i18n="farmer_dash_col_action">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for p in products[:5] %}
-          <tr>
-            <td>
-              {% if p.image_filename %}
-                <img src="/static/uploads/{{ p.image_filename }}" width="40" height="40"
-                     class="rounded me-2" style="object-fit:cover;" />
-              {% endif %}
-              {{ p.name }}
-            </td>
-            <td><span class="badge bg-success">{{ p.category or 'N/A' }}</span></td>
-            <td>₹{{ p.price }}/unit</td>
-            <td>{{ p.quantity }}</td>
-            <td>
-              <form action="{{ url_for('marketplace.delete_product', product_id=p.id) }}"
-                    method="POST" class="d-inline">
-                <button type="submit" class="btn btn-outline-danger btn-sm"
-                        onclick="return confirm(I18n.t('my_products_delete_confirm'))">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <div class="alert alert-info">
-      <i class="bi bi-info-circle me-1"></i>
-      <span data-i18n="farmer_dash_no_products">No products yet.</span>
-      <a href="{{ url_for('marketplace.add_product') }}" data-i18n="farmer_dash_add_first">Add your first product →</a>
-    </div>
-  {% endif %}
-
+  </section>
+  <section class="dashboard-section" aria-labelledby="my-listings-heading">
+    <div class="section-heading"><h2 id="my-listings-heading" data-i18n="farmer_dash_my_listings">My produce listings</h2><a href="{{ url_for('marketplace.my_products') }}" data-i18n="farmer_dash_manage_all">Manage all listings</a></div>
+    {% if products %}
+    <div class="table-responsive"><table class="table align-middle mb-0"><caption class="visually-hidden" data-i18n="dash_listings_caption">Your latest five produce listings</caption><thead><tr><th scope="col" data-i18n="farmer_dash_col_product">Product</th><th scope="col" data-i18n="farmer_dash_col_price">Price</th><th scope="col" data-i18n="farmer_dash_col_quantity">Available stock</th><th scope="col" data-i18n="farmer_dash_col_action">Action</th></tr></thead><tbody>
+    {% for product in products[:5] %}<tr><th scope="row">{{ product.name }}</th><td class="text-nowrap">₹{{ '%.2f'|format(product.price) }} / {{ product.stock_unit }}</td><td>{{ product.quantity }}</td><td><a class="btn btn-outline-success btn-sm" href="{{ url_for('marketplace.edit_product', product_id=product.id) }}" data-i18n="dash_edit">Edit</a></td></tr>{% endfor %}
+    </tbody></table></div>
+    {% else %}
+    <div class="empty-state"><i class="bi bi-basket2" aria-hidden="true"></i><h3 class="h5" data-i18n="dash_no_listings">Your next harvest belongs here</h3><p data-i18n="dash_no_listings_desc">Add a product with its price, available quantity and a clear photo so buyers know what you offer.</p><a class="btn btn-success" href="{{ url_for('marketplace.add_product') }}" data-i18n="farmer_dash_add_first">Add your first product</a></div>
+    {% endif %}
+  </section>
+  <section class="help-banner mt-5 mb-0"><div><h2 data-i18n="dash_advice_title">A little help for your next decision</h2><p data-i18n="dash_advice_note">Explore weather observations, crop options and general farming guidance. Check local conditions before acting.</p></div><a class="btn btn-success" href="{{ url_for('chatbot.chat') }}" data-i18n="home_help_action">Ask a question</a></section>
 </div>
 {% endblock %}

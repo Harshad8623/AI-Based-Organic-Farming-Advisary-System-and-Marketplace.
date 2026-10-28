@@ -1029,107 +1029,369 @@ const TRANSLATIONS = {
   },
 };
 
-/* ─────────────────────────────────────────────
-   KrishiAI I18n Engine
-───────────────────────────────────────────── */
+/* Essential interface copy: available without a translation service. */
+Object.assign(TRANSLATIONS.en, {
+  "nav_home": "Home",
+  "skip_to_content": "Skip to content",
+  "brand_tagline": "Growing better, together",
+  "nav_toggle": "Open navigation",
+  "nav_language": "Choose language",
+  "nav_main": "Main navigation",
+  "nav_brand_home": "Dharti Rakshak home",
+  "nav_about": "About the project",
+  "nav_farm_tools": "Farm planner",
+  "nav_growing_tools": "Growing tools",
+  "nav_crop_ai": "Crop options",
+  "nav_disease": "Plant health",
+  "nav_chatbot": "Farming assistant",
+  "nav_crop_roadmaps": "Crop guides",
+  "nav_register": "Create account",
+  "connection_offline": "You are offline. Keep this page open and reconnect before saving.",
+  "dismiss_message": "Dismiss message",
+  "footer_tagline": "Practical tools for your farm, in your language.",
+  "home_eyebrow": "Rooted in better farming",
+  "home_hero_title": "A little guidance.\nA better growing season.",
+  "home_hero_subtitle": "Plan your farm, keep track of expenses, and connect directly with buyers. Simple tools for the work you do every day.",
+  "home_dashboard": "Go to my dashboard",
+  "home_get_started": "Start your journey",
+  "home_browse_market": "Explore the market",
+  "home_language_note": "Your farm. Your language. English, हिंदी, मराठी.",
+  "home_art_title": "Small steps. Strong roots.",
+  "home_art_subtitle": "Make room for a healthier farm.",
+  "home_art_label": "Made for everyday farming",
+  "home_value_plan": "Plan your next step",
+  "home_value_money": "Understand your farm costs",
+  "home_value_sell": "Connect with local buyers",
+  "home_tools_eyebrow": "Less searching. More growing.",
+  "home_features_title": "What would you like to do?",
+  "home_tools_intro": "Choose a task and take the next step.",
+  "home_plan_tag": "Your farm notebook",
+  "home_plan_title": "Plan work & track money",
+  "home_plan_desc": "Keep tasks, due dates, income and expenses together. Know what needs attention next.",
+  "home_plan_action": "Open farm planner",
+  "home_market_title": "Buy & sell produce",
+  "home_market_desc": "Browse local listings, compare prices, and manage your orders in one place.",
+  "home_guides_title": "Find a growing guide",
+  "home_guides_desc": "Read crop guides from soil preparation to harvest. Adapt each step to your local conditions.",
+  "home_guides_action": "Explore crop guides",
+  "home_weather_title": "Check the weather",
+  "home_weather_desc": "Look up available weather observations and general farming considerations for your area.",
+  "home_weather_action": "View weather",
+  "home_crop_title": "Explore crop options",
+  "home_crop_desc": "Use soil and climate inputs to explore experimental suggestions, then discuss them with a local expert.",
+  "home_crop_action": "Compare crop options",
+  "home_health_title": "Understand plant health",
+  "home_health_desc": "Review a leaf photo when analysis is available. Confirm suspected problems before treating crops.",
+  "home_health_action": "Open plant health",
+  "home_help_eyebrow": "A helping hand",
+  "home_help_title": "Not sure where to start?",
+  "home_help_desc": "Ask the farming assistant about soil care, composting, water conservation or using this platform.",
+  "home_help_action": "Ask a question",
+  "home_about_title": "Built around the people who grow our food.",
+  "home_about_desc": "Dharti Rakshak brings practical farm records, learning resources and a local marketplace together. Advisory tools support your decisions; local soil tests and qualified agricultural advice remain essential.",
+  "home_created_by": "Created by",
+  "dash_farm_eyebrow": "Your farm, at a glance",
+  "dash_farm_intro": "A clear view of your work, your produce and your orders.",
+  "dash_waiting_orders": "orders need your attention",
+  "dash_waiting_note": "Review the delivery details before accepting an order.",
+  "dash_metrics_label": "Your marketplace activity",
+  "dash_delivered_value": "Delivered order value",
+  "dash_next_step": "What is your next step?",
+  "dash_planner_desc": "Keep tasks, due dates and farm expenses in your private notebook.",
+  "dash_manage_produce": "Manage my produce",
+  "dash_produce_desc": "Keep available stock and prices up to date for buyers.",
+  "dash_manage_orders": "Review my orders",
+  "dash_orders_desc": "Accept requests and track each delivery from start to finish.",
+  "dash_guides_desc": "Use step-by-step crop guides alongside local expert advice.",
+  "dash_listings_caption": "Your first five produce listings",
+  "dash_edit": "Edit",
+  "dash_no_listings": "Your next harvest belongs here",
+  "dash_no_listings_desc": "Add a product with its price, available quantity and a clear photo so buyers know what you offer.",
+  "dash_advice_title": "A little help for your next decision",
+  "dash_advice_note": "Explore weather observations, crop options and general farming guidance. Check local conditions before acting.",
+  "dash_buyer_eyebrow": "Good food. Local connections.",
+  "dash_buyer_intro": "Find local produce and keep your orders in one place.",
+  "dash_shopping_actions": "Shopping actions",
+  "dash_browse_desc": "Compare listings and check the price and unit before ordering.",
+  "dash_cart_desc": "Review your quantities and delivery details before checkout.",
+  "dash_open_cart": "Review my cart",
+  "dash_buyer_orders_desc": "Follow order acceptance and delivery. Rate an order after it arrives.",
+  "dash_track_orders": "Track my orders",
+  "dash_market_empty": "The marketplace is just getting started",
+  "farmer_dash_my_products": "My listings",
+  "farmer_dash_pending_orders": "Pending orders",
+  "farmer_dash_view_orders": "View orders",
+  "farmer_dash_manage_all": "Manage listings",
+  "farmer_dash_my_listings": "My produce listings",
+  "farmer_dash_col_quantity": "Available stock",
+  "farmer_dash_add_first": "Add your first product",
+  "buyer_dash_contact_farmer": "View farmer",
+  "buyer_dash_latest": "Fresh from the marketplace",
+  "buyer_dash_no_products": "There are no listings yet. Come back to see produce added by farmers."
+});
+Object.assign(TRANSLATIONS.hi, {
+  "nav_home": "मुख्य पृष्ठ",
+  "skip_to_content": "मुख्य भाग पर जाएँ",
+  "brand_tagline": "साथ मिलकर बेहतर खेती",
+  "nav_toggle": "मेन्यू खोलें",
+  "nav_language": "भाषा चुनें",
+  "nav_main": "मुख्य मेन्यू",
+  "nav_brand_home": "धरती रक्षक मुख्य पृष्ठ",
+  "nav_about": "परियोजना के बारे में",
+  "nav_farm_tools": "खेती की योजना",
+  "nav_growing_tools": "खेती के साधन",
+  "nav_crop_ai": "फसल के विकल्प",
+  "nav_disease": "पौधों का स्वास्थ्य",
+  "nav_chatbot": "खेती सहायक",
+  "nav_crop_roadmaps": "फसल मार्गदर्शिका",
+  "nav_register": "खाता बनाएँ",
+  "connection_offline": "इंटरनेट बंद है। यह पृष्ठ खुला रखें और सेव करने से पहले दोबारा जुड़ें।",
+  "dismiss_message": "संदेश बंद करें",
+  "footer_tagline": "आपकी भाषा में, आपकी खेती के लिए उपयोगी साधन।",
+  "home_eyebrow": "बेहतर खेती की ओर",
+  "home_hero_title": "थोड़ा मार्गदर्शन।\nबेहतर खेती का मौसम।",
+  "home_hero_subtitle": "खेती की योजना बनाएँ, खर्च का हिसाब रखें और खरीदारों से सीधे जुड़ें। रोज़ के काम के लिए आसान साधन।",
+  "home_dashboard": "मेरा डैशबोर्ड खोलें",
+  "home_get_started": "शुरू करें",
+  "home_browse_market": "बाज़ार देखें",
+  "home_language_note": "आपकी खेती। आपकी भाषा। English, हिंदी, मराठी।",
+  "home_art_title": "छोटे कदम। मज़बूत जड़ें।",
+  "home_art_subtitle": "स्वस्थ खेती की ओर बढ़ें।",
+  "home_art_label": "रोज़ की खेती के लिए",
+  "home_value_plan": "अगले काम की योजना बनाएँ",
+  "home_value_money": "खेती के खर्च समझें",
+  "home_value_sell": "स्थानीय खरीदारों से जुड़ें",
+  "home_tools_eyebrow": "कम खोजें। ज़्यादा उगाएँ।",
+  "home_features_title": "आप क्या करना चाहेंगे?",
+  "home_tools_intro": "काम चुनें और अगला कदम उठाएँ।",
+  "home_plan_tag": "आपकी खेती की डायरी",
+  "home_plan_title": "काम और पैसों का हिसाब",
+  "home_plan_desc": "काम, तारीखें, आमदनी और खर्च एक साथ रखें। जानें कि अगला ज़रूरी काम क्या है।",
+  "home_plan_action": "खेती की योजना खोलें",
+  "home_market_title": "उपज खरीदें और बेचें",
+  "home_market_desc": "स्थानीय उपज देखें, कीमतें मिलाएँ और अपने ऑर्डर एक जगह सँभालें।",
+  "home_guides_title": "खेती की मार्गदर्शिका खोजें",
+  "home_guides_desc": "मिट्टी की तैयारी से कटाई तक फसल मार्गदर्शिका पढ़ें। हर कदम स्थानीय परिस्थितियों के अनुसार अपनाएँ।",
+  "home_guides_action": "फसल मार्गदर्शिका देखें",
+  "home_weather_title": "मौसम देखें",
+  "home_weather_desc": "अपने क्षेत्र के उपलब्ध मौसम के आँकड़े और खेती के सामान्य सुझाव देखें।",
+  "home_weather_action": "मौसम देखें",
+  "home_crop_title": "फसल के विकल्प देखें",
+  "home_crop_desc": "मिट्टी और जलवायु की जानकारी से प्रयोगात्मक सुझाव देखें, फिर स्थानीय विशेषज्ञ से चर्चा करें।",
+  "home_crop_action": "फसल विकल्पों की तुलना करें",
+  "home_health_title": "पौधों का स्वास्थ्य समझें",
+  "home_health_desc": "विश्लेषण उपलब्ध होने पर पत्ती की तस्वीर जाँचें। उपचार से पहले समस्या की पुष्टि करें।",
+  "home_health_action": "पौधों का स्वास्थ्य देखें",
+  "home_help_eyebrow": "मदद आपके साथ",
+  "home_help_title": "कहाँ से शुरू करें?",
+  "home_help_desc": "खेती सहायक से मिट्टी की देखभाल, खाद, जल संरक्षण या इस मंच के उपयोग के बारे में पूछें।",
+  "home_help_action": "सवाल पूछें",
+  "home_about_title": "हमारा भोजन उगाने वालों के लिए।",
+  "home_about_desc": "धरती रक्षक खेती की नोंद, सीखने की जानकारी और स्थानीय बाज़ार को एक जगह लाता है। सलाह के साधन आपके निर्णय में मदद करते हैं; स्थानीय मिट्टी परीक्षण और कृषि विशेषज्ञ की सलाह ज़रूरी है।",
+  "home_created_by": "निर्माता",
+  "dash_farm_eyebrow": "आपकी खेती, एक नज़र में",
+  "dash_farm_intro": "अपने काम, उपज और ऑर्डर की साफ़ जानकारी पाएँ।",
+  "dash_waiting_orders": "ऑर्डर पर ध्यान देना है",
+  "dash_waiting_note": "ऑर्डर स्वीकारने से पहले डिलीवरी की जानकारी जाँचें।",
+  "dash_metrics_label": "बाज़ार में आपकी गतिविधि",
+  "dash_delivered_value": "पहुँचाए गए ऑर्डर का मूल्य",
+  "dash_next_step": "आपका अगला काम क्या है?",
+  "dash_planner_desc": "काम, तारीखें और खेती के खर्च अपनी निजी डायरी में रखें।",
+  "dash_manage_produce": "मेरी उपज सँभालें",
+  "dash_produce_desc": "खरीदारों के लिए उपलब्ध स्टॉक और कीमतें सही रखें।",
+  "dash_manage_orders": "मेरे ऑर्डर देखें",
+  "dash_orders_desc": "अनुरोध स्वीकारें और हर डिलीवरी का पूरा विवरण देखें।",
+  "dash_guides_desc": "स्थानीय विशेषज्ञ की सलाह के साथ फसल की चरणबद्ध मार्गदर्शिका उपयोग करें।",
+  "dash_listings_caption": "आपकी पहली पाँच उपज की नोंद",
+  "dash_edit": "बदलें",
+  "dash_no_listings": "अपनी अगली फसल यहाँ बेचें",
+  "dash_no_listings_desc": "उत्पाद की कीमत, उपलब्ध मात्रा और साफ़ तस्वीर जोड़ें ताकि खरीदार आपकी उपज जान सकें।",
+  "dash_advice_title": "अगले निर्णय के लिए थोड़ी मदद",
+  "dash_advice_note": "मौसम, फसल विकल्प और खेती का सामान्य मार्गदर्शन देखें। काम से पहले स्थानीय स्थिति जाँचें।",
+  "dash_buyer_eyebrow": "अच्छी उपज। स्थानीय जुड़ाव।",
+  "dash_buyer_intro": "स्थानीय उपज खोजें और अपने ऑर्डर एक जगह रखें।",
+  "dash_shopping_actions": "खरीदारी के विकल्प",
+  "dash_browse_desc": "उपज की तुलना करें और ऑर्डर से पहले कीमत और इकाई जाँचें।",
+  "dash_cart_desc": "ऑर्डर से पहले मात्रा और डिलीवरी की जानकारी जाँचें।",
+  "dash_open_cart": "मेरी टोकरी देखें",
+  "dash_buyer_orders_desc": "ऑर्डर की स्वीकृति और डिलीवरी देखें। मिलने के बाद ऑर्डर की रेटिंग दें।",
+  "dash_track_orders": "मेरे ऑर्डर की स्थिति देखें",
+  "dash_market_empty": "बाज़ार की शुरुआत हो रही है",
+  "farmer_dash_my_products": "मेरी उपज की सूची",
+  "farmer_dash_pending_orders": "बाकी ऑर्डर",
+  "farmer_dash_view_orders": "ऑर्डर देखें",
+  "farmer_dash_manage_all": "उपज की सूची सँभालें",
+  "farmer_dash_my_listings": "मेरी उपज की सूची",
+  "farmer_dash_col_quantity": "उपलब्ध स्टॉक",
+  "farmer_dash_add_first": "अपना पहला उत्पाद जोड़ें",
+  "buyer_dash_contact_farmer": "किसान की जानकारी देखें",
+  "buyer_dash_latest": "बाज़ार की नई उपज",
+  "buyer_dash_no_products": "अभी कोई उपज सूचीबद्ध नहीं है। किसानों की नई उपज देखने फिर आएँ।"
+});
+Object.assign(TRANSLATIONS.mr, {
+  "nav_home": "मुख्य पान",
+  "skip_to_content": "मुख्य भागावर जा",
+  "brand_tagline": "एकत्र येऊ, शेती सुधारू",
+  "nav_toggle": "मेनू उघडा",
+  "nav_language": "भाषा निवडा",
+  "nav_main": "मुख्य मेनू",
+  "nav_brand_home": "धरती रक्षक मुख्य पान",
+  "nav_about": "प्रकल्पाविषयी",
+  "nav_farm_tools": "शेतीचे नियोजन",
+  "nav_growing_tools": "शेतीची साधने",
+  "nav_crop_ai": "पिकांचे पर्याय",
+  "nav_disease": "पिकांचे आरोग्य",
+  "nav_chatbot": "शेती सहाय्यक",
+  "nav_crop_roadmaps": "पीक मार्गदर्शिका",
+  "nav_register": "खाते तयार करा",
+  "connection_offline": "इंटरनेट बंद आहे. हे पान उघडे ठेवा आणि जतन करण्यापूर्वी पुन्हा जोडा.",
+  "dismiss_message": "संदेश बंद करा",
+  "footer_tagline": "आपल्या भाषेत, आपल्या शेतीसाठी उपयोगी साधने.",
+  "home_eyebrow": "चांगल्या शेतीकडे",
+  "home_hero_title": "थोडे मार्गदर्शन.\nचांगला शेतीचा हंगाम.",
+  "home_hero_subtitle": "शेतीचे नियोजन करा, खर्चाची नोंद ठेवा आणि खरेदीदारांशी थेट संपर्क साधा. रोजच्या कामासाठी सोपी साधने.",
+  "home_dashboard": "माझा आढावा पाहा",
+  "home_get_started": "सुरुवात करा",
+  "home_browse_market": "बाजार पाहा",
+  "home_language_note": "आपली शेती. आपली भाषा. English, हिंदी, मराठी.",
+  "home_art_title": "छोटी पावले. मजबूत मुळे.",
+  "home_art_subtitle": "निरोगी शेतीकडे वळा.",
+  "home_art_label": "रोजच्या शेतीसाठी",
+  "home_value_plan": "पुढील कामाचे नियोजन करा",
+  "home_value_money": "शेतीचा खर्च समजून घ्या",
+  "home_value_sell": "स्थानिक खरेदीदारांशी जोडा",
+  "home_tools_eyebrow": "कमी शोधा. अधिक पिकवा.",
+  "home_features_title": "तुम्हाला काय करायचे आहे?",
+  "home_tools_intro": "काम निवडा आणि पुढचे पाऊल टाका.",
+  "home_plan_tag": "आपली शेतीची वही",
+  "home_plan_title": "काम आणि पैशांचे नियोजन",
+  "home_plan_desc": "कामे, तारखा, उत्पन्न आणि खर्च एकत्र ठेवा. पुढचे महत्त्वाचे काम जाणून घ्या.",
+  "home_plan_action": "शेतीचे नियोजन उघडा",
+  "home_market_title": "शेतमाल खरेदी-विक्री",
+  "home_market_desc": "स्थानिक शेतमाल पाहा, किमतींची तुलना करा आणि ऑर्डर एकाच ठिकाणी हाताळा.",
+  "home_guides_title": "पीक मार्गदर्शिका शोधा",
+  "home_guides_desc": "जमिनीच्या तयारीपासून काढणीपर्यंत पीक मार्गदर्शिका वाचा. प्रत्येक पायरी स्थानिक परिस्थितीनुसार वापरा.",
+  "home_guides_action": "पीक मार्गदर्शिका पाहा",
+  "home_weather_title": "हवामान पाहा",
+  "home_weather_desc": "आपल्या भागातील उपलब्ध हवामानाची माहिती आणि शेतीचे सामान्य विचार पाहा.",
+  "home_weather_action": "हवामान पाहा",
+  "home_crop_title": "पिकांचे पर्याय पाहा",
+  "home_crop_desc": "माती आणि हवामानाच्या माहितीवर प्रायोगिक सूचना पाहा, नंतर स्थानिक तज्ज्ञांशी चर्चा करा.",
+  "home_crop_action": "पिकांच्या पर्यायांची तुलना करा",
+  "home_health_title": "पिकांचे आरोग्य समजून घ्या",
+  "home_health_desc": "विश्लेषण उपलब्ध असल्यास पानाचे छायाचित्र तपासा. उपचार करण्यापूर्वी समस्येची खात्री करा.",
+  "home_health_action": "पिकांचे आरोग्य पाहा",
+  "home_help_eyebrow": "मदतीचा हात",
+  "home_help_title": "कुठून सुरुवात करावी?",
+  "home_help_desc": "शेती सहाय्यकाला मातीची काळजी, कंपोस्ट, पाणी बचत किंवा या मंचाच्या वापराबद्दल विचारा.",
+  "home_help_action": "प्रश्न विचारा",
+  "home_about_title": "आपले अन्न पिकवणाऱ्यांसाठी.",
+  "home_about_desc": "धरती रक्षक शेतीच्या नोंदी, शिकण्याची साधने आणि स्थानिक बाजार एकत्र आणतो. ही साधने निर्णय घेण्यास मदत करतात; स्थानिक माती परीक्षण आणि कृषी तज्ज्ञांचा सल्ला आवश्यक आहे.",
+  "home_created_by": "निर्माता",
+  "dash_farm_eyebrow": "आपल्या शेतीचा आढावा",
+  "dash_farm_intro": "आपले काम, शेतमाल आणि ऑर्डरची स्पष्ट माहिती पाहा.",
+  "dash_waiting_orders": "ऑर्डरकडे लक्ष द्यायचे आहे",
+  "dash_waiting_note": "ऑर्डर स्वीकारण्यापूर्वी पोहोचवण्याचा तपशील तपासा.",
+  "dash_metrics_label": "बाजारातील आपली माहिती",
+  "dash_delivered_value": "पोहोचवलेल्या ऑर्डरचे मूल्य",
+  "dash_next_step": "आपले पुढचे काम कोणते?",
+  "dash_planner_desc": "कामे, तारखा आणि शेतीचा खर्च आपल्या खाजगी वहीत ठेवा.",
+  "dash_manage_produce": "माझा शेतमाल सांभाळा",
+  "dash_produce_desc": "खरेदीदारांसाठी उपलब्ध साठा आणि किमती अद्ययावत ठेवा.",
+  "dash_manage_orders": "माझ्या ऑर्डर पाहा",
+  "dash_orders_desc": "विनंत्या स्वीकारा आणि प्रत्येक डिलीवरीची सुरुवातीपासून शेवटपर्यंत माहिती पाहा.",
+  "dash_guides_desc": "स्थानिक तज्ज्ञांच्या सल्ल्यासोबत पिकांची टप्प्याटप्प्याची मार्गदर्शिका वापरा.",
+  "dash_listings_caption": "आपल्या पहिल्या पाच शेतमाल नोंदी",
+  "dash_edit": "बदला",
+  "dash_no_listings": "आपला पुढचा शेतमाल येथे विक्रीला ठेवा",
+  "dash_no_listings_desc": "उत्पादनाची किंमत, उपलब्ध प्रमाण आणि स्पष्ट छायाचित्र जोडा, म्हणजे खरेदीदारांना तुमचा माल समजेल.",
+  "dash_advice_title": "पुढील निर्णयासाठी थोडी मदत",
+  "dash_advice_note": "हवामान, पिकांचे पर्याय आणि शेतीचे सामान्य मार्गदर्शन पाहा. कृतीपूर्वी स्थानिक परिस्थिती तपासा.",
+  "dash_buyer_eyebrow": "चांगला शेतमाल. स्थानिक नाती.",
+  "dash_buyer_intro": "स्थानिक शेतमाल शोधा आणि आपल्या ऑर्डर एकाच ठिकाणी ठेवा.",
+  "dash_shopping_actions": "खरेदीचे पर्याय",
+  "dash_browse_desc": "शेतमालाची तुलना करा आणि ऑर्डरपूर्वी किंमत व एकक तपासा.",
+  "dash_cart_desc": "ऑर्डरपूर्वी प्रमाण आणि पोहोचवण्याचा तपशील तपासा.",
+  "dash_open_cart": "माझी टोपली पाहा",
+  "dash_buyer_orders_desc": "ऑर्डरची स्वीकृती आणि डिलीवरी पाहा. माल मिळाल्यानंतर ऑर्डरला गुण द्या.",
+  "dash_track_orders": "माझ्या ऑर्डरची स्थिती पाहा",
+  "dash_market_empty": "बाजाराची सुरुवात होत आहे",
+  "farmer_dash_my_products": "माझ्या शेतमाल नोंदी",
+  "farmer_dash_pending_orders": "प्रलंबित ऑर्डर",
+  "farmer_dash_view_orders": "ऑर्डर पाहा",
+  "farmer_dash_manage_all": "शेतमाल नोंदी सांभाळा",
+  "farmer_dash_my_listings": "माझ्या शेतमाल नोंदी",
+  "farmer_dash_col_quantity": "उपलब्ध साठा",
+  "farmer_dash_add_first": "आपले पहिले उत्पादन जोडा",
+  "buyer_dash_contact_farmer": "शेतकऱ्याची माहिती पाहा",
+  "buyer_dash_latest": "बाजारातील नवीन शेतमाल",
+  "buyer_dash_no_products": "अद्याप शेतमालाची नोंद नाही. शेतकऱ्यांचा नवीन माल पाहण्यासाठी पुन्हा या."
+});
+
+/* Language storage can be unavailable in private/embedded browsers. */
+Object.assign(TRANSLATIONS.en, {register_password_ph: '8–128 characters'});
+Object.assign(TRANSLATIONS.hi, {register_password_ph: '8–128 अक्षर'});
+Object.assign(TRANSLATIONS.mr, {register_password_ph: '8–128 अक्षरे'});
 const I18n = (() => {
   const STORAGE_KEY = 'krishiai_lang';
   const DEFAULT_LANG = 'en';
   const SUPPORTED = ['en', 'hi', 'mr'];
-
-  let currentLang = localStorage.getItem(STORAGE_KEY) || DEFAULT_LANG;
-  if (!SUPPORTED.includes(currentLang)) currentLang = DEFAULT_LANG;
-
-  /* Registered language-change listeners */
-  const _listeners = [];
-
-  /** Return translated string for key in current language */
-  function t(key, lang) {
-    const l = lang || currentLang;
-    return (TRANSLATIONS[l] && TRANSLATIONS[l][key]) ||
-           (TRANSLATIONS[DEFAULT_LANG] && TRANSLATIONS[DEFAULT_LANG][key]) ||
-           key;
-  }
-
-  /** Apply translations to all data-i18n elements */
-  function apply(root) {
-    root = root || document;
-
-    /* Text content */
-    root.querySelectorAll('[data-i18n]').forEach(el => {
-      const key = el.getAttribute('data-i18n');
-      el.textContent = t(key);
+  let currentLang = DEFAULT_LANG;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (SUPPORTED.includes(saved)) currentLang = saved;
+  } catch (_) { /* The interface still works when storage is disabled. */ }
+  const listeners = [];
+  const translate = (key, lang) => TRANSLATIONS[lang || currentLang]?.[key] ?? TRANSLATIONS.en[key];
+  function t(key, lang) { return translate(key, lang) ?? key; }
+  function apply(root = document) {
+    const elements = selector => {
+      const result = Array.from(root.querySelectorAll(selector));
+      if (root.matches?.(selector)) result.unshift(root);
+      return result;
+    };
+    elements('[data-i18n]').forEach(element => {
+      const value = translate(element.dataset.i18n);
+      // A missing extension must leave readable original text, never a raw key.
+      if (value === undefined) return;
+      const icon = Array.from(element.children).find(child => child.matches('i.bi, .translation-icon'));
+      if (icon) {
+        const preserved = icon.cloneNode(true);
+        element.textContent = '';
+        element.append(preserved, document.createTextNode(' ' + value));
+      } else element.textContent = value;
     });
-
-    /* Placeholder attribute */
-    root.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-      const key = el.getAttribute('data-i18n-placeholder');
-      el.placeholder = t(key);
+    [['placeholder', 'data-i18n-placeholder'], ['title', 'data-i18n-title'], ['aria-label', 'data-i18n-aria']].forEach(([attribute, selector]) => {
+      elements('[' + selector + ']').forEach(element => {
+        const value = translate(element.getAttribute(selector));
+        if (value !== undefined) element.setAttribute(attribute, value);
+      });
     });
-
-    /* Title attribute */
-    root.querySelectorAll('[data-i18n-title]').forEach(el => {
-      const key = el.getAttribute('data-i18n-title');
-      el.title = t(key);
+    document.querySelectorAll('.lang-btn').forEach(button => {
+      const selected = button.dataset.lang === currentLang;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-pressed', String(selected));
     });
-
-    /* aria-label attribute */
-    root.querySelectorAll('[data-i18n-aria]').forEach(el => {
-      const key = el.getAttribute('data-i18n-aria');
-      el.setAttribute('aria-label', t(key));
-    });
-
-    /* Update lang switcher active state */
-    document.querySelectorAll('.lang-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.lang === currentLang);
-    });
-
-    /* Update <html lang> */
     document.documentElement.lang = currentLang;
   }
-
-  /** Switch language and persist */
   function setLang(lang) {
     if (!SUPPORTED.includes(lang)) return;
     currentLang = lang;
-    localStorage.setItem(STORAGE_KEY, lang);
+    try { localStorage.setItem(STORAGE_KEY, lang); } catch (_) {}
     apply();
-    /* Notify all registered listeners (e.g. DynamicTranslator) */
-    _listeners.forEach(fn => { try { fn(lang); } catch(e) {} });
+    listeners.forEach(listener => { try { listener(lang); } catch (_) {} });
   }
-
-  function getLang() { return currentLang; }
-
-  /** Register a callback that fires whenever language changes */
-  function onLangChange(fn) {
-    if (typeof fn === 'function') _listeners.push(fn);
-  }
-
-  /* Auto-apply on DOM ready */
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => apply());
-  } else {
+  function onLangChange(listener) { if (typeof listener === 'function') listeners.push(listener); }
+  function ready() {
     apply();
-  }
-
-  return { t, apply, setLang, getLang, onLangChange };
-})();
-
-/* ─────────────────────────────────────────────
-   Language Switcher Button Handler
-   (buttons injected by base.html)
-───────────────────────────────────────────── */
-function _wireLangButtons() {
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      I18n.setLang(btn.dataset.lang);
+    document.querySelectorAll('.lang-btn').forEach(button => {
+      button.addEventListener('click', () => setLang(button.dataset.lang));
     });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready);
+  else ready();
+  window.addEventListener('storage', event => {
+    if (event.key === STORAGE_KEY && SUPPORTED.includes(event.newValue)) setLang(event.newValue);
   });
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _wireLangButtons);
-} else {
-  _wireLangButtons();
-}
+  return {t, apply, setLang, getLang: () => currentLang, onLangChange};
+})();

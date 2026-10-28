@@ -14,6 +14,7 @@
         <div class="card-body p-4">
 
           <form method="POST" action="{{ url_for('auth.register') }}" id="registerForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <!-- Role Selection -->
             <div class="mb-3">
@@ -41,7 +42,7 @@
             <!-- Name -->
             <div class="mb-3">
               <label for="name" class="form-label" data-i18n="register_name_label">Full Name</label>
-              <input type="text" class="form-control" id="name" name="name"
+              <input type="text" class="form-control" id="name" name="name" maxlength="100" autocomplete="name" value="{{ request.form.get('name', '') }}"
                      data-i18n-placeholder="register_name_ph"
                      placeholder="Your full name" required />
             </div>
@@ -49,14 +50,14 @@
             <!-- Email -->
             <div class="mb-3">
               <label for="email" class="form-label" data-i18n="register_email_label">Email Address</label>
-              <input type="email" class="form-control" id="email" name="email"
+              <input type="email" class="form-control" id="email" name="email" maxlength="120" autocomplete="email" value="{{ request.form.get('email', '') }}"
                      placeholder="you@example.com" required />
             </div>
 
             <!-- Phone -->
             <div class="mb-3">
               <label for="phone" class="form-label" data-i18n="register_phone_label">Phone Number</label>
-              <input type="tel" class="form-control" id="phone" name="phone"
+              <input type="tel" class="form-control" id="phone" name="phone" maxlength="20" autocomplete="tel" value="{{ request.form.get('phone', '') }}"
                      data-i18n-placeholder="register_phone_ph"
                      placeholder="+91 XXXXXXXXXX" />
             </div>
@@ -64,7 +65,7 @@
             <!-- Location (always visible) -->
             <div class="mb-3">
               <label for="location" class="form-label" data-i18n="register_location_label">Location / Village</label>
-              <input type="text" class="form-control" id="location" name="location"
+              <input type="text" class="form-control" id="location" name="location" maxlength="200" value="{{ request.form.get('location', '') }}"
                      data-i18n-placeholder="register_location_ph"
                      placeholder="e.g. Pune, Maharashtra" />
             </div>
@@ -74,16 +75,16 @@
               <div class="mb-3">
                 <label for="soil_type" class="form-label">
                   <span data-i18n="register_soil_label">Soil Type</span>
-                  <small class="text-muted">(Farmer)</small>
+                  <small class="text-muted" data-i18n="register_farmer">Farmer</small>
                 </label>
                 <select class="form-select" id="soil_type" name="soil_type">
                   <option value="" data-i18n="register_soil_ph">Select soil type</option>
-                  <option>Loamy</option>
-                  <option>Clay</option>
-                  <option>Sandy</option>
-                  <option>Silt</option>
-                  <option>Peat</option>
-                  <option>Chalky</option>
+                  <option value="Loamy" data-i18n="auth_soil_loamy" {{ 'selected' if request.form.get('soil_type') == 'Loamy' else '' }}>Loamy</option>
+                  <option value="Clay" data-i18n="auth_soil_clay" {{ 'selected' if request.form.get('soil_type') == 'Clay' else '' }}>Clay</option>
+                  <option value="Sandy" data-i18n="auth_soil_sandy" {{ 'selected' if request.form.get('soil_type') == 'Sandy' else '' }}>Sandy</option>
+                  <option value="Silt" data-i18n="auth_soil_silt" {{ 'selected' if request.form.get('soil_type') == 'Silt' else '' }}>Silt</option>
+                  <option value="Peat" data-i18n="auth_soil_peat" {{ 'selected' if request.form.get('soil_type') == 'Peat' else '' }}>Peat</option>
+                  <option value="Chalky" data-i18n="auth_soil_chalky" {{ 'selected' if request.form.get('soil_type') == 'Chalky' else '' }}>Chalky</option>
                 </select>
               </div>
             </div>
@@ -93,14 +94,14 @@
               <label for="password" class="form-label" data-i18n="register_password_label">Password</label>
               <input type="password" class="form-control" id="password" name="password"
                      data-i18n-placeholder="register_password_ph"
-                     placeholder="Min 6 characters" required minlength="6" />
+                     placeholder="Min 8 characters" required minlength="8" maxlength="128" autocomplete="new-password" />
             </div>
 
             <!-- Confirm Password -->
             <div class="mb-3">
               <label for="confirm_password" class="form-label" data-i18n="register_confirm_label">Confirm Password</label>
               <input type="password" class="form-control" id="confirm_password"
-                     name="confirm_password"
+                     name="confirm_password" maxlength="128" autocomplete="new-password"
                      data-i18n-placeholder="register_confirm_ph"
                      placeholder="Repeat password" required />
             </div>

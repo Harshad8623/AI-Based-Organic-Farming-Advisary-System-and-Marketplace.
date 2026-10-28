@@ -1,140 +1,34 @@
-"""
-routes/analytics.py
--------------------
-Agricultural data analytics dashboard using Plotly.
-Charts are passed as JSON to the template and rendered with Plotly.js.
-"""
-
-import json
-import random
-import itertools
+"""Actual marketplace counts and private order activity; no simulated statistics."""
+from datetime import datetime, timezone
+from decimal import Decimal
 from flask import Blueprint, render_template
-from flask_login import login_required
+from flask_login import login_required, current_user
 from models import db, Product, User, Order
-from datetime import datetime, timezone, timedelta
 
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/analytics')
 
 
-def _make_chart(chart_type, labels, values, title, color_scheme=None):
-    """Helper to create a Plotly chart dict."""
-    base_colors = color_scheme or ['#2e7d32','#388e3c','#43a047','#4caf50','#66bb6a',
-                                   '#81c784','#a5d6a7','#c8e6c9','#e8f5e9','#f1f8e9']
-    # Cycle colors so we never run short regardless of label count
-    colors = list(itertools.islice(itertools.cycle(base_colors), len(labels)))
-    if chart_type == 'bar':
-        data = [{'type': 'bar', 'x': labels, 'y': values,
-                 'marker': {'color': colors}}]
-    elif chart_type == 'pie':
-        data = [{'type': 'pie', 'labels': labels, 'values': values,
-                 'marker': {'colors': colors}}]
-    elif chart_type == 'line':
-        data = [{'type': 'scatter', 'mode': 'lines+markers',
-                 'x': labels, 'y': values,
-                 'line': {'color': '#2e7d32', 'width': 3},
-                 'marker': {'color': '#43a047', 'size': 8}}]
-    else:
-        data = []
-
-    layout = {
-        'title': {'text': title, 'font': {'size': 16}},
-        'paper_bgcolor': 'rgba(0,0,0,0)',
-        'plot_bgcolor':  'rgba(0,0,0,0)',
-        'margin': {'l': 40, 'r': 20, 't': 50, 'b': 40},
-        'xaxis': {'gridcolor': '#e0e0e0'},
-        'yaxis': {'gridcolor': '#e0e0e0'},
-        'showlegend': chart_type == 'pie',
-    }
-    return json.dumps({'data': data, 'layout': layout})
+def _month_starts(now):
+    index = now.year * 12 + now.month - 1
+    return [datetime((index-i)//12, (index-i)%12+1, 1, tzinfo=timezone.utc) for i in range(11, -1, -1)]
 
 
-def _crop_distribution():
-    """How many products per category in the marketplace."""
-    rows = db.session.query(Product.category, db.func.count(Product.id))\
-                     .group_by(Product.category).all()
-    if not rows:
-        # Sample data when DB is empty
-        rows = [('Vegetables', 12), ('Fruits', 8), ('Grains', 10),
-                ('Spices', 5), ('Pulses', 7), ('Dairy', 3)]
-    labels = [r[0] or 'Other' for r in rows]
-    values = [r[1] for r in rows]
-    return _make_chart('pie', labels, values, 'Product Categories in Marketplace')
-
-
-def _price_by_category():
-    """Average product price per category."""
-    rows = db.session.query(Product.category, db.func.avg(Product.price))\
-                     .group_by(Product.category).all()
-    if not rows:
-        rows = [('Vegetables', 35), ('Fruits', 60), ('Grains', 25),
-                ('Spices', 150), ('Pulses', 80), ('Dairy', 45)]
-    labels = [r[0] or 'Other' for r in rows]
-    values = [round(r[1], 2) for r in rows]
-    return _make_chart('bar', labels, values, 'Average Price per Category (₹/kg)')
-
-
-def _monthly_registrations():
-    """Real monthly user registrations for the last 12 months from the DB."""
-    now   = datetime.now(timezone.utc)
-    # Build month labels and date boundaries for the last 12 months
-    months_labels = []
-    counts        = []
-    for i in range(11, -1, -1):
-        # First day of each month going back
-        month_start = (now.replace(day=1) - timedelta(days=i * 30)).replace(
-            day=1, hour=0, minute=0, second=0, microsecond=0
-        )
-        # Last day of that month = first day of next month
-        if month_start.month == 12:
-            month_end = month_start.replace(year=month_start.year + 1, month=1)
-        else:
-            month_end = month_start.replace(month=month_start.month + 1)
-
-        label = month_start.strftime('%b %Y')
-        count = User.query.filter(
-            User.created_at >= month_start,
-            User.created_at < month_end
-        ).count()
-        months_labels.append(label)
-        counts.append(count)
-
-    return _make_chart('line', months_labels, counts, 'User Registrations (Last 12 Months)')
-
-
-def _soil_crop_guide():
-    """Best crops for each soil type (educational chart)."""
-    soils  = ['Clay', 'Sandy', 'Loamy', 'Silt', 'Peat', 'Chalky']
-    scores = [72, 55, 95, 85, 78, 62]  # Fertility index (0-100)
-    return _make_chart('bar', soils, scores, 'Soil Fertility Index by Type',
-                       color_scheme=['#1b5e20','#2e7d32','#388e3c','#43a047','#4caf50','#66bb6a'])
-
-
-def _harvest_yield_trend():
-    """Simulated yield trend data (tonnes/acre)."""
-    years  = ['2019', '2020', '2021', '2022', '2023', '2024']
-    yields = [2.1, 2.4, 2.3, 2.8, 3.1, 3.4]  # Organic farming improvement
-    return _make_chart('line', years, yields, 'Average Yield Trend (Tonnes/Acre)')
-
-
-# ---------------------------------------------------------------------------
-# Route
-# ---------------------------------------------------------------------------
 @analytics_bp.route('/')
 @login_required
 def dashboard():
-    charts = {
-        'category_distribution': _crop_distribution(),
-        'price_by_category':     _price_by_category(),
-        'monthly_registrations': _monthly_registrations(),
-        'soil_fertility':        _soil_crop_guide(),
-        'yield_trend':           _harvest_yield_trend(),
-    }
-
-    stats = {
-        'total_farmers': User.query.filter_by(role='farmer').count(),
-        'total_buyers':  User.query.filter_by(role='buyer').count(),
-        'total_products': Product.query.count(),
-        'avg_price':     round(db.session.query(db.func.avg(Product.price)).scalar() or 0, 2),
-    }
-
-    return render_template('analytics/dashboard.html', charts=charts, stats=stats)
+    categories = db.session.query(Product.category, db.func.count(Product.id)).group_by(Product.category).all()
+    owned_orders = Order.query.filter_by(**({'farmer_id': current_user.id} if current_user.is_farmer() else {'buyer_id': current_user.id})).all()
+    months = _month_starts(datetime.now(timezone.utc))
+    monthly = []
+    for month in months:
+        matches = [order for order in owned_orders if order.created_at and
+                   (order.created_at.year, order.created_at.month) == (month.year, month.month)]
+        delivered = [order for order in matches if order.status == 'delivered']
+        monthly.append({'label': month.strftime('%b %Y'), 'orders': len(matches),
+                        'delivered': len(delivered),
+                        'amount': sum((Decimal(str(order.total_price)) for order in delivered), Decimal('0'))})
+    statuses = {status: sum(order.status == status for order in owned_orders) for status in Order.STATUS_CHOICES}
+    return render_template('analytics/dashboard.html', categories=categories, monthly=monthly, statuses=statuses,
+        stats={'total_farmers': User.query.filter_by(role='farmer').count(),
+               'total_buyers': User.query.filter_by(role='buyer').count(),
+               'total_products': Product.query.count(), 'your_orders': len(owned_orders)})

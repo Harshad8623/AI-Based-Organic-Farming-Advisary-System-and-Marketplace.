@@ -74,7 +74,7 @@
         <div class="row g-3">
           <div class="col-6">
             <div class="label" data-i18n="rate_order_product">Product</div>
-            <div class="value">{{ order.product.name }}</div>
+            <div class="value">{{ order.product_name }}</div>
           </div>
           <div class="col-6">
             <div class="label" data-i18n="rate_order_farmer">Farmer</div>
@@ -82,7 +82,7 @@
           </div>
           <div class="col-6">
             <div class="label" data-i18n="buyer_orders_col_qty">Quantity</div>
-            <div class="value">{{ order.quantity_ordered }}</div>
+            <div class="value">{{ order.quantity_ordered }} {{ order.quantity_unit }}</div>
           </div>
           <div class="col-6">
             <div class="label" data-i18n="buyer_orders_col_total">Total Paid</div>
@@ -93,6 +93,7 @@
 
       <!-- Rating Form -->
       <form method="POST" action="{{ url_for('orders.rate_order', order_id=order.id) }}" id="rating-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <h5 class="text-center fw-bold mb-0" style="color:#1a3a2a;" data-i18n="rate_order_stars_label">How would you rate this product?</h5>
         <div class="star-hint" id="star-hint">Click a star to rate</div>
 

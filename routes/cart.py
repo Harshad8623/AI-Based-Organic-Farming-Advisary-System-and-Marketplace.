@@ -1,333 +1,304 @@
-"""
-routes/cart.py
---------------
-Shopping Cart: Add, view, remove items.
-Checkout supports:
-  - COD  (Cash on Delivery)  → direct form POST
-  - Razorpay UPI / Card      → two-step: create order → verify signature → save
-"""
-
-import re
-import hmac
+"""Cart and checkout with immutable payment snapshots and atomic stock updates."""
 import hashlib
-import razorpay
+import hmac
+import json
+import secrets
+import re
 
-from flask import (Blueprint, render_template, redirect, url_for,
-                   flash, request, jsonify, current_app)
+import razorpay
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, session, abort
 from flask_login import login_required, current_user
-from models import db, CartItem, Product, Order
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from models import db, CartItem, Product, Order, CheckoutAttempt, OrderReceipt
+from commerce import parse_stock, stock_text, price_paise, order_quantity, MAX_TOTAL_PAISE
 
 cart_bp = Blueprint('cart', __name__, url_prefix='/cart')
 
 
+def _payment_enabled():
+    return bool((current_app.config.get('RAZORPAY_KEY_ID') or '').strip()
+                and (current_app.config.get('RAZORPAY_KEY_SECRET') or '').strip())
+
+
 def _razorpay_client():
-    """Return an authenticated Razorpay client with defensive whitespace stripping."""
-    key_id = current_app.config.get('RAZORPAY_KEY_ID', '').strip()
-    key_secret = current_app.config.get('RAZORPAY_KEY_SECRET', '').strip()
-    return razorpay.Client(auth=(key_id, key_secret))
+    if not _payment_enabled():
+        raise ValueError('Online payments are unavailable. Please use cash on delivery.')
+    return razorpay.Client(auth=(current_app.config['RAZORPAY_KEY_ID'].strip(),
+                                current_app.config['RAZORPAY_KEY_SECRET'].strip()))
 
 
+def _buyer():
+    if not current_user.is_buyer():
+        abort(403)
 
-# ---------------------------------------------------------------------------
-# View Cart
-# ---------------------------------------------------------------------------
+
+def _address(value):
+    if not isinstance(value, str) or not 5 <= len(value.strip()) <= 500:
+        raise ValueError('Enter a delivery address between 5 and 500 characters.')
+    return value.strip()
+
+
+def _snapshot():
+    items = CartItem.query.filter_by(buyer_id=current_user.id).order_by(CartItem.id).all()
+    if not items:
+        raise ValueError('Your cart is empty.')
+    snapshot = []
+    total = 0
+    for item in items:
+        product = item.product
+        if product is None or product.farmer_id == current_user.id:
+            raise ValueError('A product is no longer available. Please update your cart.')
+        qty = order_quantity(item.quantity)
+        available, unit = parse_stock(product.quantity)
+        if qty > available:
+            raise ValueError(f'Only {product.quantity} of {product.name} is available. Update your cart.')
+        unit_paise = price_paise(product.price)
+        total += unit_paise * qty
+        snapshot.append({'cart_id': item.id, 'product_id': product.id,
+                         'farmer_id': product.farmer_id, 'name': product.name,
+                         'quantity': qty, 'unit_paise': unit_paise, 'unit': unit})
+    if not 0 < total <= MAX_TOTAL_PAISE:
+        raise ValueError('This order total is too large. Please split your order.')
+    return snapshot, total
+
+
+def _fulfil(attempt, method, payment_id=None):
+    """Must be committed with the attempt claim in the same transaction.
+
+    Conditional writes protect against stale carts and concurrent purchases on
+    both SQLite and PostgreSQL; all lines roll back if any stock update fails.
+    """
+    snapshot = json.loads(attempt.items_json)
+    for line in snapshot:
+        product = db.session.get(Product, line['product_id'], populate_existing=True)
+        if not product or product.farmer_id != line['farmer_id']:
+            raise ValueError('A product is no longer available.')
+        available, unit = parse_stock(product.quantity)
+        if unit != line['unit'] or price_paise(product.price) != line['unit_paise']:
+            raise ValueError(f'The price or unit of {line["name"]} changed. Please review your cart.')
+        if available < line['quantity']:
+            raise ValueError(f'Insufficient stock for {line["name"]}. Please review your cart.')
+        updated = db.session.query(Product).filter(
+            Product.id == product.id, Product.quantity == product.quantity,
+            Product.price == product.price
+        ).update({Product.quantity: stock_text(available - line['quantity'], unit)}, synchronize_session=False)
+        if updated != 1:
+            raise ValueError('Stock changed while ordering. Please review your cart and retry.')
+        order = Order(
+            buyer_id=attempt.buyer_id, farmer_id=line['farmer_id'], product_id=line['product_id'],
+            quantity_ordered=line['quantity'], total_price=line['quantity'] * line['unit_paise'] / 100,
+            delivery_location=attempt.delivery_location, payment_method=method,
+            razorpay_order_id=attempt.gateway_order_id, razorpay_payment_id=payment_id,
+            status='pending',
+        )
+        order.receipt = OrderReceipt(product_name=line['name'], unit=line['unit'], unit_price_paise=line['unit_paise'])
+        db.session.add(order)
+        # Only consume the original cart line. New items added during payment remain.
+        item = db.session.get(CartItem, line['cart_id'])
+        if item and item.buyer_id == attempt.buyer_id and item.product_id == line['product_id']:
+            if item.quantity > line['quantity']:
+                item.quantity -= line['quantity']
+            else:
+                db.session.delete(item)
+    attempt.status = 'complete'
+    attempt.payment_id = payment_id
+    return len(snapshot)
+
+
 @cart_bp.route('/')
 @login_required
 def view_cart():
-    if not current_user.is_buyer():
-        flash('Only buyers can access the cart.', 'danger')
-        return redirect(url_for('marketplace.listing'))
-
+    _buyer()
     items = CartItem.query.filter_by(buyer_id=current_user.id).all()
-    total = sum(item.subtotal() for item in items)
-    razorpay_key = current_app.config.get('RAZORPAY_KEY_ID', '')
-    return render_template('cart/cart.html',
-                           items=items,
-                           total=total,
-                           razorpay_key=razorpay_key)
+    total = 0
+    for item in items:
+        try:
+            total += price_paise(item.product.price) * item.quantity
+        except (ValueError, AttributeError):
+            flash('A listing has an invalid price. Remove it or ask the farmer to update it.', 'warning')
+    session.setdefault('checkout_token', secrets.token_hex(24))
+    return render_template('cart/cart.html', items=items, total=total / 100,
+                           checkout_token=session['checkout_token'],
+                           razorpay_key=current_app.config.get('RAZORPAY_KEY_ID', '') if _payment_enabled() else '')
 
 
-# ---------------------------------------------------------------------------
-# Add to Cart
-# ---------------------------------------------------------------------------
 @cart_bp.route('/add/<int:product_id>', methods=['POST'])
 @login_required
 def add_to_cart(product_id):
-    if not current_user.is_buyer():
-        flash('Only buyers can add items to cart.', 'danger')
-        return redirect(url_for('marketplace.listing'))
-
+    _buyer()
     product = db.get_or_404(Product, product_id)
-
-    if product.farmer_id == current_user.id:
-        flash('You cannot buy your own product.', 'warning')
-        return redirect(url_for('marketplace.listing'))
-
+    existing = CartItem.query.filter_by(buyer_id=current_user.id, product_id=product_id).first()
     try:
-        qty = int(request.form.get('quantity', 1))
-    except (ValueError, TypeError):
-        qty = 1
-    if qty < 1:
-        qty = 1
-    # Sensible upper cap to prevent abuse
-    if qty > 500:
-        qty = 500
-
-    # Try to extract numeric stock from product.quantity string (e.g. '100', '50 kg')
-    stock_available = None  # initialized before use to avoid NameError
-    stock_match = re.search(r'\d+', str(product.quantity))
-    if stock_match:
-        stock_available = int(stock_match.group())
-        if qty > stock_available:
-            flash(f'Only {product.quantity} of "{product.name}" is available.', 'warning')
-            qty = stock_available
-
-    existing = CartItem.query.filter_by(
-        buyer_id=current_user.id,
-        product_id=product_id
-    ).first()
-
-    if existing:
-        new_total = existing.quantity + qty
-        # Re-check against stock after combining
-        if stock_available is not None and new_total > stock_available:
-            new_total = stock_available
-            flash(f'Cart updated to maximum available stock: {product.quantity}.', 'info')
-        existing.quantity = new_total
-    else:
-        item = CartItem(buyer_id=current_user.id, product_id=product_id, quantity=qty)
-        db.session.add(item)
-
-    db.session.commit()
-    flash(f'🛒 "{product.name}" added to cart!', 'success')
-    # Safe redirect: only allow same-origin referrers to prevent open redirect
-    referrer = request.referrer
-    from urllib.parse import urlparse
-    if referrer and urlparse(referrer).netloc == urlparse(request.host_url).netloc:
-        return redirect(referrer)
+        if product.farmer_id == current_user.id:
+            raise ValueError('You cannot buy your own product.')
+        qty = order_quantity(request.form.get('quantity', '1'))
+        qty = order_quantity(qty + (existing.quantity if existing else 0))
+        available, _ = parse_stock(product.quantity)
+        price_paise(product.price)
+        if qty > available:
+            raise ValueError(f'Only {product.quantity} of {product.name} is available.')
+        if existing:
+            existing.quantity = qty
+        else:
+            db.session.add(CartItem(buyer_id=current_user.id, product_id=product.id, quantity=qty))
+        db.session.commit()
+        flash(f'{product.name} added to your cart.', 'success')
+    except ValueError as error:
+        db.session.rollback()
+        flash(str(error), 'warning')
     return redirect(url_for('marketplace.listing'))
 
 
-# ---------------------------------------------------------------------------
-# Remove from Cart
-# ---------------------------------------------------------------------------
 @cart_bp.route('/remove/<int:item_id>', methods=['POST'])
 @login_required
 def remove_from_cart(item_id):
+    _buyer()
     item = db.get_or_404(CartItem, item_id)
     if item.buyer_id != current_user.id:
-        flash('Access denied.', 'danger')
-        return redirect(url_for('cart.view_cart'))
+        abort(403)
     db.session.delete(item)
     db.session.commit()
     flash('Item removed from cart.', 'info')
     return redirect(url_for('cart.view_cart'))
 
 
-# ---------------------------------------------------------------------------
-# Update Quantity
-# ---------------------------------------------------------------------------
 @cart_bp.route('/update/<int:item_id>', methods=['POST'])
 @login_required
 def update_quantity(item_id):
+    _buyer()
     item = db.get_or_404(CartItem, item_id)
     if item.buyer_id != current_user.id:
-        return jsonify({'error': 'Access denied'}), 403
+        abort(403)
     try:
-        qty = int(request.form.get('quantity', 1))
-    except (ValueError, TypeError):
-        qty = 1
-    if qty < 1:
-        db.session.delete(item)
-    else:
-        item.quantity = qty
-    db.session.commit()
+        qty = order_quantity(request.form.get('quantity'), allow_zero=True)
+        if qty == 0:
+            db.session.delete(item)
+        else:
+            available, _ = parse_stock(item.product.quantity)
+            if qty > available:
+                raise ValueError(f'Only {item.product.quantity} is available.')
+            item.quantity = qty
+        db.session.commit()
+    except ValueError as error:
+        db.session.rollback()
+        flash(str(error), 'warning')
     return redirect(url_for('cart.view_cart'))
 
 
-# ---------------------------------------------------------------------------
-# STEP 1 — Create Razorpay Order  (called via fetch from frontend)
-# ---------------------------------------------------------------------------
-@cart_bp.route('/create-razorpay-order', methods=['POST'])
-@login_required
-def create_razorpay_order():
-    """
-    Creates a Razorpay order for the current cart total.
-    Returns JSON: { razorpay_order_id, amount, currency, key }
-    """
-    if not current_user.is_buyer():
-        return jsonify({'error': 'Only buyers can checkout.'}), 403
-
-    items = CartItem.query.filter_by(buyer_id=current_user.id).all()
-    if not items:
-        return jsonify({'error': 'Cart is empty.'}), 400
-
-    delivery_location = (request.json or {}).get('delivery_location', '').strip()
-    if not delivery_location:
-        return jsonify({'error': 'Delivery address is required.'}), 400
-
-    # Convert total to paise (Razorpay uses smallest currency unit)
-    total_rupees = sum(item.subtotal() for item in items)
-    amount_paise = int(total_rupees * 100)
-
-    try:
-        client = _razorpay_client()
-        rz_order = client.order.create({
-            'amount':   amount_paise,
-            'currency': 'INR',
-            'payment_capture': 1,       # Auto-capture
-            'notes': {
-                'buyer_id': current_user.id,
-                'buyer_name': current_user.name,
-                'delivery_location': delivery_location,
-            }
-        })
-    except Exception as e:
-        current_app.logger.error(f'Razorpay order creation failed: {e}')
-        return jsonify({'error': 'Payment gateway error. Please try again.'}), 500
-
-    return jsonify({
-        'razorpay_order_id': rz_order['id'],
-        'amount':            amount_paise,
-        'currency':          'INR',
-        'key':               current_app.config.get('RAZORPAY_KEY_ID', '').strip(),
-        'name':              current_user.name,
-        'email':             current_user.email,
-    })
-
-
-# ---------------------------------------------------------------------------
-# STEP 2 — Verify & Confirm (Razorpay callback)
-# ---------------------------------------------------------------------------
-@cart_bp.route('/verify-payment', methods=['POST'])
-@login_required
-def verify_payment():
-    """
-    Called after Razorpay popup succeeds.
-    Verifies HMAC-SHA256 signature, creates DB orders, clears cart.
-    """
-    if not current_user.is_buyer():
-        flash('Only buyers can checkout.', 'danger')
-        return redirect(url_for('marketplace.listing'))
-
-    razorpay_order_id   = request.form.get('razorpay_order_id', '')
-    razorpay_payment_id = request.form.get('razorpay_payment_id', '')
-    razorpay_signature  = request.form.get('razorpay_signature', '')
-    delivery_location   = request.form.get('delivery_location', '').strip()
-
-    if not all([razorpay_order_id, razorpay_payment_id, razorpay_signature]):
-        flash('Payment verification failed — incomplete data.', 'danger')
-        return redirect(url_for('cart.view_cart'))
-
-    # If delivery_location is missing (due to server redirection), retrieve it from Razorpay order notes
-    if not delivery_location:
-        try:
-            client = _razorpay_client()
-            rz_order = client.order.fetch(razorpay_order_id)
-            delivery_location = rz_order.get('notes', {}).get('delivery_location', '').strip()
-        except Exception as e:
-            current_app.logger.error(f"Failed to fetch order notes for address recovery: {e}")
-
-    if not delivery_location:
-        flash('Payment verification failed — delivery address is missing.', 'danger')
-        return redirect(url_for('cart.view_cart'))
-
-    # ---- Signature Verification (HMAC-SHA256) ----
-    key_secret = current_app.config.get('RAZORPAY_KEY_SECRET', '').strip().encode('utf-8')
-    msg        = f'{razorpay_order_id}|{razorpay_payment_id}'.encode('utf-8')
-    expected   = hmac.new(key_secret, msg, hashlib.sha256).hexdigest()
-
-    if not hmac.compare_digest(expected, razorpay_signature):
-        flash('⚠️ Payment verification failed — signature mismatch. Please contact support.', 'danger')
-        return redirect(url_for('cart.view_cart'))
-
-    # ---- Create DB Orders ----
-    items = CartItem.query.filter_by(buyer_id=current_user.id).all()
-    if not items:
-        flash('Your cart is empty!', 'warning')
-        return redirect(url_for('cart.view_cart'))
-
-    order_count = 0
-    for item in items:
-        order = Order(
-            buyer_id            = current_user.id,
-            farmer_id           = item.product.farmer_id,
-            product_id          = item.product_id,
-            quantity_ordered    = item.quantity,
-            total_price         = item.subtotal(),
-            delivery_location   = delivery_location,
-            payment_method      = 'razorpay',
-            razorpay_order_id   = razorpay_order_id,
-            razorpay_payment_id = razorpay_payment_id,
-            status              = 'pending'
-        )
-        db.session.add(order)
-
-        # Decrement stock: parse numeric part from product.quantity string
-        stock_match = re.search(r'\d+', str(item.product.quantity))
-        if stock_match:
-            current_stock = int(stock_match.group())
-            new_stock = max(0, current_stock - item.quantity)
-            # Preserve any trailing unit text (e.g. " kg")
-            unit_suffix = str(item.product.quantity)[stock_match.end():]
-            item.product.quantity = str(new_stock) + unit_suffix
-
-        order_count += 1
-
-    CartItem.query.filter_by(buyer_id=current_user.id).delete()
-    db.session.commit()
-
-    flash(f'✅ Payment successful! {order_count} order(s) placed. Payment ID: {razorpay_payment_id}', 'success')
-    return redirect(url_for('orders.buyer_orders'))
-
-
-# ---------------------------------------------------------------------------
-# COD Checkout (unchanged flow)
-# ---------------------------------------------------------------------------
 @cart_bp.route('/checkout', methods=['POST'])
 @login_required
 def checkout():
-    """Cash on Delivery checkout — no payment gateway needed."""
-    if not current_user.is_buyer():
-        flash('Only buyers can checkout.', 'danger')
-        return redirect(url_for('marketplace.listing'))
-
-    items = CartItem.query.filter_by(buyer_id=current_user.id).all()
-    if not items:
-        flash('Your cart is empty!', 'warning')
+    _buyer()
+    token = request.form.get('checkout_token', '')
+    if not re.fullmatch(r'[a-f0-9]{48}', token) or not hmac.compare_digest(token, session.get('checkout_token', '')):
+        flash('This checkout form has expired. Review your cart and try again.', 'warning')
         return redirect(url_for('cart.view_cart'))
-
-    delivery_location = request.form.get('delivery_location', '').strip()
-    if not delivery_location:
-        flash('Please enter your delivery address.', 'danger')
+    previous = db.session.get(CheckoutAttempt, token)
+    if previous and previous.buyer_id == current_user.id and previous.status == 'complete':
+        flash('This order was already placed. You have not been charged again.', 'info')
+        return redirect(url_for('orders.buyer_orders'))
+    try:
+        location = _address(request.form.get('delivery_location'))
+        snapshot, total = _snapshot()
+        attempt = CheckoutAttempt(id=token, buyer_id=current_user.id, amount_paise=total,
+                                  delivery_location=location, items_json=json.dumps(snapshot), status='processing')
+        db.session.add(attempt)
+        db.session.flush()  # Unique token claims this checkout before any stock mutation.
+        count = _fulfil(attempt, 'cod')
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash('This checkout has already been submitted. Check My Orders before retrying.', 'info')
+        return redirect(url_for('orders.buyer_orders'))
+    except ValueError as error:
+        db.session.rollback()
+        flash(str(error), 'warning')
         return redirect(url_for('cart.view_cart'))
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception('Checkout transaction failed')
+        flash('We could not save your order. No order was placed. Please retry.', 'danger')
+        return redirect(url_for('cart.view_cart'))
+    session['checkout_token'] = secrets.token_hex(24)
+    flash(f'{count} order(s) placed with cash on delivery. Track confirmation in My Orders.', 'success')
+    return redirect(url_for('orders.buyer_orders'))
 
-    order_count = 0
-    for item in items:
-        order = Order(
-            buyer_id          = current_user.id,
-            farmer_id         = item.product.farmer_id,
-            product_id        = item.product_id,
-            quantity_ordered  = item.quantity,
-            total_price       = item.subtotal(),
-            delivery_location = delivery_location,
-            payment_method    = 'cod',
-            status            = 'pending'
-        )
-        db.session.add(order)
 
-        # Decrement stock: parse numeric part from product.quantity string
-        stock_match = re.search(r'\d+', str(item.product.quantity))
-        if stock_match:
-            current_stock = int(stock_match.group())
-            new_stock = max(0, current_stock - item.quantity)
-            unit_suffix = str(item.product.quantity)[stock_match.end():]
-            item.product.quantity = str(new_stock) + unit_suffix
+@cart_bp.route('/create-razorpay-order', methods=['POST'])
+@login_required
+def create_razorpay_order():
+    _buyer()
+    if not _payment_enabled():
+        return jsonify(error='Online payments are unavailable. Please use cash on delivery.'), 503
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify(error='A JSON checkout request is required.'), 400
+    try:
+        location = _address(data.get('delivery_location'))
+        snapshot, total = _snapshot()
+    except ValueError as error:
+        return jsonify(error=str(error)), 400
+    attempt = CheckoutAttempt(id=secrets.token_hex(24), buyer_id=current_user.id, amount_paise=total,
+                              delivery_location=location, items_json=json.dumps(snapshot), status='pending')
+    try:
+        gateway = _razorpay_client().order.create({
+            'amount': total, 'currency': 'INR', 'receipt': attempt.id[:40],
+            'notes': {'buyer_id': str(current_user.id), 'checkout_id': attempt.id},
+        }, timeout=(5, 15))
+        if not isinstance(gateway.get('id'), str) or not gateway['id']:
+            raise ValueError('Missing payment order identifier')
+        attempt.gateway_order_id = gateway['id']
+        db.session.add(attempt)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        current_app.logger.error('Payment order creation failed')
+        return jsonify(error='Payment gateway is unavailable. No payment was taken; use COD or retry.'), 502
+    return jsonify(razorpay_order_id=attempt.gateway_order_id, amount=total, currency='INR',
+                   key=current_app.config['RAZORPAY_KEY_ID'].strip(), name=current_user.name, email=current_user.email)
 
-        order_count += 1
 
-    CartItem.query.filter_by(buyer_id=current_user.id).delete()
-    db.session.commit()
-
-    flash(f'✅ {order_count} order(s) placed (Cash on Delivery)! Farmers will confirm soon.', 'success')
+@cart_bp.route('/verify-payment', methods=['POST'])
+@login_required
+def verify_payment():
+    _buyer()
+    if not _payment_enabled():
+        abort(503)
+    gateway_id = request.form.get('razorpay_order_id', '')
+    payment_id = request.form.get('razorpay_payment_id', '')
+    signature = request.form.get('razorpay_signature', '')
+    if not gateway_id or len(gateway_id) > 100 or not re.fullmatch(r'[a-f0-9]{64}', signature):
+        abort(400, description='Invalid payment confirmation.')
+    attempt = CheckoutAttempt.query.filter_by(gateway_order_id=gateway_id, buyer_id=current_user.id).first()
+    if not attempt or not payment_id or len(payment_id) > 100:
+        abort(400, description='Payment does not belong to this checkout.')
+    secret = current_app.config['RAZORPAY_KEY_SECRET'].strip().encode()
+    expected = hmac.new(secret, f'{gateway_id}|{payment_id}'.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        abort(400, description='Invalid payment signature.')
+    if attempt.status == 'complete':
+        flash('Your payment was already recorded. See My Orders.', 'info')
+        return redirect(url_for('orders.buyer_orders'))
+    try:
+        payment = _razorpay_client().payment.fetch(payment_id, timeout=(5, 15))
+        if (payment.get('order_id') != gateway_id or payment.get('currency') != 'INR'
+                or payment.get('amount') != attempt.amount_paise or payment.get('status') != 'captured'):
+            raise ValueError('Payment is not confirmed as captured for this order. Keep your payment reference and retry later.')
+        claimed = CheckoutAttempt.query.filter_by(id=attempt.id, status='pending').update(
+            {CheckoutAttempt.status: 'processing'}, synchronize_session=False)
+        if claimed != 1:
+            raise ValueError('This payment is already being processed. Check My Orders.')
+        count = _fulfil(attempt, 'razorpay', payment_id)
+        db.session.commit()
+    except ValueError as error:
+        db.session.rollback()
+        # A captured payment must never silently produce incorrect or oversold orders.
+        flash(f'{error} If money was deducted, contact the platform operator with payment reference {payment_id}; do not pay again.', 'danger')
+        return redirect(url_for('cart.view_cart'))
+    except Exception:
+        db.session.rollback()
+        current_app.logger.error('Payment reconciliation failed')
+        flash(f'Payment confirmation is temporarily unavailable. Keep reference {payment_id} and retry confirmation; do not pay again.', 'danger')
+        return redirect(url_for('cart.view_cart'))
+    flash(f'Payment confirmed. {count} order(s) placed.', 'success')
     return redirect(url_for('orders.buyer_orders'))

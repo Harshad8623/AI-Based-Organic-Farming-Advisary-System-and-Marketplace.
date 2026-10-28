@@ -1,0 +1,10 @@
+(() => {
+  const keys = ['title','note','total_farmers','total_buyers','total_products','your_orders','categories','empty','status','pending','accepted','rejected','shipped','delivered','months','month_note','table_caption','month','orders','amount','ledger'];
+  const values = {
+    en: ['Your farm insights','Real records from this platform. Your order activity is private to your account.','Farmers','Buyers','Listings','Your orders','Marketplace categories','No listings yet. Counts will appear when farmers list products.','Your order status','Pending','Accepted','Rejected','Shipped','Delivered','Your last 12 months','Grouped by order creation month (UTC). Amounts include delivered orders only; they are not a profit calculation or proof of payment.','Your monthly order activity','Month','Orders','Delivered value (₹)','Open income & expense book'],
+    hi: ['आपके खेत की जानकारी','इस मंच के वास्तविक रिकॉर्ड। आपके ऑर्डर की जानकारी केवल आपके खाते में दिखाई देती है।','किसान','खरीदार','उत्पाद','आपके ऑर्डर','बाज़ार की श्रेणियाँ','अभी कोई उत्पाद नहीं है। उत्पाद जुड़ने पर संख्या दिखाई देगी।','आपके ऑर्डर की स्थिति','लंबित','स्वीकृत','अस्वीकृत','भेजा गया','पहुँच गया','आपके पिछले 12 महीने','ऑर्डर बनाने के महीने (UTC) के अनुसार। केवल पहुँचे हुए ऑर्डर की राशि; यह लाभ या भुगतान का प्रमाण नहीं है।','आपके मासिक ऑर्डर','महीना','ऑर्डर','पहुँचे ऑर्डर की राशि (₹)','आय और खर्च की बही खोलें'],
+    mr: ['तुमच्या शेतीची माहिती','या व्यासपीठावरील खऱ्या नोंदी. तुमच्या ऑर्डरची माहिती फक्त तुमच्या खात्यात दिसते.','शेतकरी','खरेदीदार','उत्पादने','तुमच्या ऑर्डर','बाजारातील प्रकार','अजून उत्पादने नाहीत. उत्पादने जोडल्यावर संख्या दिसेल.','तुमच्या ऑर्डरची स्थिती','प्रलंबित','स्वीकारले','नाकारले','पाठवले','पोहोचले','तुमचे मागील 12 महिने','ऑर्डर तयार केलेल्या महिन्यानुसार (UTC). फक्त पोहोचलेल्या ऑर्डरची रक्कम; हा नफा किंवा पैसे मिळाल्याचा पुरावा नाही.','तुमच्या मासिक ऑर्डर','महिना','ऑर्डर','पोहोचलेल्या ऑर्डरची रक्कम (₹)','जमा आणि खर्चाची वही उघडा']
+  };
+  Object.entries(values).forEach(([lang, items]) => keys.forEach((key, i) => TRANSLATIONS[lang]['insights_'+key] = items[i]));
+  I18n.apply();
+})();

@@ -14,10 +14,12 @@
         <div class="card-body p-4">
 
           <form method="POST" action="{{ url_for('auth.login') }}">
+            <input type="hidden" name="next" value="{{ request.args.get('next', request.form.get('next', '')) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div class="mb-3">
               <label for="email" class="form-label" data-i18n="login_email_label">Email Address</label>
-              <input type="email" class="form-control" id="email" name="email"
+              <input type="email" class="form-control" id="email" name="email" maxlength="120" autocomplete="email" value="{{ request.form.get('email', '') }}"
                      data-i18n-placeholder="login_email_ph"
                      placeholder="you@example.com" required autofocus />
             </div>
@@ -25,7 +27,7 @@
             <div class="mb-3">
               <label for="password" class="form-label" data-i18n="login_password_label">Password</label>
               <input type="password" class="form-control" id="password"
-                     name="password"
+                     name="password" maxlength="128" autocomplete="current-password"
                      data-i18n-placeholder="login_password_ph"
                      placeholder="Your password" required />
             </div>

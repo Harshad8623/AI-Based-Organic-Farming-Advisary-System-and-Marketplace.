@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} — KrishiAI{% endblock %}
+{% block content %}
+<div class="container py-5 text-center">
+  <p class="display-4 fw-bold text-success">{{ code }}</p>
+  <h1 class="h4"{% if message_key(message) %} data-i18n="{{ message_key(message) }}"{% else %} data-translate{% endif %}>{{ message }}</h1>
+  <a class="btn btn-success mt-3" href="{{ url_for('index') }}" data-i18n="nav_home">Home</a>
+</div>
+{% endblock %}

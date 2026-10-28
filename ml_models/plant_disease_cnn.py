@@ -5,7 +5,7 @@ Inference module for the PlantVillage-trained CNN disease detector.
 
 Priority chain:
   1. ONNX model  (plant_disease_model.onnx)  — fast, GPU/CPU, works offline
-  2. Not available                            — caller uses Gemini / Demo
+  2. Not available                            — caller uses Gemini or reports unavailable
 
 Usage:
     from ml_models.plant_disease_cnn import CNNDiseasePredictor
@@ -37,24 +37,13 @@ from PIL import Image
 # IMPORTANT: These keys MUST exactly match the folder names in the dataset.
 # This dataset (Kaggle/emmarex) has inconsistent underscores — carefully matched below.
 PLANTVILLAGE_TO_DB = {
-    # ── Pepper ──────────────────────────────────────────────────────────────
-    'Pepper__bell___Bacterial_spot':                     'Bacterial Blight of Rice',  # closest match
-    'Pepper__bell___healthy':                            'Healthy Plant',
-    # ── Potato ──────────────────────────────────────────────────────────────
-    'Potato___Early_blight':                             'Early Blight',
-    'Potato___Late_blight':                              'Late Blight',
-    'Potato___healthy':                                  'Healthy Plant',
-    # ── Tomato ──────────────────────────────────────────────────────────────
-    'Tomato_Bacterial_spot':                             'Bacterial Blight of Rice',
-    'Tomato_Early_blight':                               'Early Blight',
-    'Tomato_Late_blight':                                'Late Blight',
-    'Tomato_Leaf_Mold':                                  'Downy Mildew',
-    'Tomato_Septoria_leaf_spot':                         'Cercospora Leaf Spot',
-    'Tomato_Spider_mites_Two_spotted_spider_mite':       'Leaf Curl',
-    'Tomato__Target_Spot':                               'Brown Spot',
-    'Tomato__Tomato_mosaic_virus':                       'Yellow Mosaic Virus',
-    'Tomato__Tomato_YellowLeaf__Curl_Virus':             'Yellow Mosaic Virus',
-    'Tomato_healthy':                                    'Healthy Plant',
+    'Pepper__bell___healthy': 'Healthy Plant',
+    'Potato___Early_blight': 'Early Blight',
+    'Potato___Late_blight': 'Late Blight',
+    'Potato___healthy': 'Healthy Plant',
+    'Tomato_Early_blight': 'Early Blight',
+    'Tomato_Late_blight': 'Late Blight',
+    'Tomato_healthy': 'Healthy Plant',
 }
 
 # Friendly display names for the Disease Detection result card
@@ -187,6 +176,9 @@ class CNNDiseasePredictor:
         # Run ONNX inference
         input_name = self._session.get_inputs()[0].name
         logits     = self._session.run(None, {input_name: input_data})[0][0]
+        if (not self._classes or len(logits) != len(self._classes) or
+                not np.isfinite(logits).all()):
+            raise ValueError('Invalid model output or class mapping')
         probs      = self._softmax(logits)
 
         # Get top-3 predictions
@@ -198,15 +190,16 @@ class CNNDiseasePredictor:
 
         # Map to display name and disease info
         friendly   = FRIENDLY_NAMES.get(best_class, best_class.replace('___', ' — ').replace('_', ' '))
-        db_name    = PLANTVILLAGE_TO_DB.get(best_class, 'Healthy Plant')
+        db_name    = PLANTVILLAGE_TO_DB.get(best_class)
 
         # Get disease info from our database
         from ml_models.disease_model import get_disease_by_name, DISEASE_DB
-        db_entry = get_disease_by_name(db_name)
+        db_entry = get_disease_by_name(db_name) if db_name else None
 
         # Check extended DB if not found in main DB
         if db_entry is None or db_entry['name'] == 'Healthy Plant':
             db_entry = EXTENDED_DB.get(friendly, db_entry)
+        db_entry = db_entry or {}
 
         return {
             'name':              friendly,

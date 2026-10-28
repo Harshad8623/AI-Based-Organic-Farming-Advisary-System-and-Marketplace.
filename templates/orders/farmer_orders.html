@@ -94,7 +94,7 @@
 {% block content %}
 <div class="farmer-orders-hero">
   <h1 data-i18n="farmer_orders_heading">📬 Incoming Orders</h1>
-  <p style="color:rgba(255,255,255,0.75);">Manage and fulfill buyer orders</p>
+  <p style="color:rgba(255,255,255,0.75);" data-i18n="commerce_manage_orders">Manage and fulfill buyer orders</p>
 </div>
 
 <div class="container py-4">
@@ -104,25 +104,25 @@
   <div class="order-stats">
     <div class="stat-box">
       <div class="num">{{ orders|length }}</div>
-      <div class="lbl">Total Orders</div>
+      <div class="lbl" data-i18n="commerce_total_orders">Total orders</div>
     </div>
     <div class="stat-box">
       <div class="num" style="color:#856404;">{{ orders|selectattr('status','equalto','pending')|list|length }}</div>
-      <div class="lbl">Pending</div>
+      <div class="lbl" data-i18n="commerce_status_pending">Pending</div>
     </div>
     <div class="stat-box">
       <div class="num" style="color:#0d6efd;">{{ orders|selectattr('status','equalto','shipped')|list|length }}</div>
-      <div class="lbl">Shipped</div>
+      <div class="lbl" data-i18n="commerce_status_shipped">Shipped</div>
     </div>
     <div class="stat-box">
       <div class="num" style="color:#1e8449;">{{ orders|selectattr('status','equalto','delivered')|list|length }}</div>
-      <div class="lbl">Delivered</div>
+      <div class="lbl" data-i18n="commerce_status_delivered">Delivered</div>
     </div>
     <div class="stat-box">
       <div class="num" style="color:#1e8449;">
-        ₹{{ "%.0f"|format(orders|sum(attribute='total_price')) }}
+        ₹{{ "%.0f"|format(delivered_revenue) }}
       </div>
-      <div class="lbl">Total Revenue</div>
+      <div class="lbl" data-i18n="commerce_revenue">Delivered order value</div>
     </div>
   </div>
 
@@ -131,20 +131,13 @@
       <!-- Header -->
       <div class="order-header">
         <div>
-          <strong>Order #{{ order.id }}</strong>
+          <strong><span data-i18n="commerce_order">Order</span> #{{ order.id }}</strong>
           <span class="text-muted ms-2" style="font-size:13px;">
-            {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }}
+            {{ order.created_at.strftime('%d %b %Y, %I:%M %p') }} UTC
           </span>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <span class="badge-status status-{{ order.status }}">
-            {% if order.status == 'pending' %}   ⏳ Pending
-            {% elif order.status == 'accepted' %} ✅ Accepted
-            {% elif order.status == 'rejected' %} ❌ Rejected
-            {% elif order.status == 'shipped' %}  🚚 Shipped
-            {% elif order.status == 'delivered' %}🎉 Delivered
-            {% endif %}
-          </span>
+          <span class="badge-status status-{{ order.status }}"><span data-i18n="commerce_status_{{ order.status }}">{{ order.status|title }}</span></span>
           <span class="payment-tag">
             {% if order.payment_method == 'cod' %}💵 Cash on Delivery
             {% elif order.payment_method == 'razorpay' %}📱 Razorpay
@@ -161,9 +154,9 @@
           <div class="col-md-4">
             <div class="buyer-info">
               <div class="label" data-i18n="farmer_orders_col_product">Product</div>
-              <div class="value">{{ order.product.name if order.product else '(Product removed)' }}</div>
+              <div class="value">{{ order.product_name }}</div>
               <div class="label mt-2" data-i18n="farmer_orders_col_qty">Quantity</div>
-              <div class="value">{{ order.quantity_ordered }}</div>
+              <div class="value">{{ order.quantity_ordered }} {{ order.quantity_unit }}</div>
               <div class="label mt-2" data-i18n="farmer_orders_col_total">Total Amount</div>
               <div class="value" style="color:#1e8449;font-size:1.1rem;">₹{{ "%.2f"|format(order.total_price) }}</div>
             </div>
@@ -187,7 +180,7 @@
           <div class="col-md-4">
             {% if order.rating %}
             <div class="buyer-info">
-              <div class="label">Buyer Rating</div>
+              <div class="label" data-i18n="commerce_buyer_rating">Buyer rating</div>
               <div class="rating-stars mt-1">
                 {% for i in range(order.rating.stars) %}⭐{% endfor %}
                 <span style="color:#1a3a2a;font-size:13px;margin-left:4px;">{{ order.rating.stars }}/5</span>
@@ -201,10 +194,10 @@
             {% else %}
             <div style="text-align:center;padding:20px;color:#adb5bd;">
               {% if order.status == 'delivered' %}
-              <div>⭐ Awaiting buyer rating</div>
+              <div data-i18n="commerce_rating_wait">Awaiting buyer rating</div>
               {% else %}
               <div style="font-size:36px;">📋</div>
-              <div style="font-size:13px;">No rating yet</div>
+              <div style="font-size:13px;" data-i18n="market_no_ratings">No rating yet</div>
               {% endif %}
             </div>
             {% endif %}
@@ -215,40 +208,46 @@
         <div class="action-btns">
           {% if order.status == 'pending' %}
           <form method="POST" action="{{ url_for('orders.update_status', order_id=order.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="status" value="accepted">
-            <button type="submit" class="btn-accept" onclick="return confirm('Accept this order?')" data-i18n="farmer_orders_accept">
+            <button type="submit" class="btn-accept" onclick="return confirm(I18n.t('commerce_confirm_accept'))" data-i18n="farmer_orders_accept">
               ✅ Accept Order
             </button>
           </form>
+          {% if order.payment_method != 'razorpay' %}
           <form method="POST" action="{{ url_for('orders.update_status', order_id=order.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="status" value="rejected">
-            <button type="submit" class="btn-reject" onclick="return confirm('Reject this order?')" data-i18n="farmer_orders_reject">
+            <button type="submit" class="btn-reject" onclick="return confirm(I18n.t('commerce_confirm_reject'))" data-i18n="farmer_orders_reject">
               ❌ Reject Order
             </button>
           </form>
 
+          {% else %}<p class="cart-note" data-i18n="commerce_refund_note">Online-paid orders require a refund arranged by the platform operator before cancellation.</p>{% endif %}
           {% elif order.status == 'accepted' %}
           <form method="POST" action="{{ url_for('orders.update_status', order_id=order.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="status" value="shipped">
-            <button type="submit" class="btn-ship" onclick="return confirm('Mark as shipped?')" data-i18n="farmer_orders_ship">
+            <button type="submit" class="btn-ship" onclick="return confirm(I18n.t('commerce_confirm_ship'))" data-i18n="farmer_orders_ship">
               🚚 Mark as Shipped
             </button>
           </form>
 
           {% elif order.status == 'shipped' %}
           <form method="POST" action="{{ url_for('orders.update_status', order_id=order.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="status" value="delivered">
-            <button type="submit" class="btn-deliver" onclick="return confirm('Mark as delivered?')" data-i18n="farmer_orders_deliver">
+            <button type="submit" class="btn-deliver" onclick="return confirm(I18n.t('commerce_confirm_deliver'))" data-i18n="farmer_orders_deliver">
               🎉 Mark as Delivered
             </button>
           </form>
 
           {% elif order.status == 'delivered' %}
-          <span style="color:#1e8449;font-weight:600;font-size:14px;">
-            ✅ Order completed successfully!
+          <span style="color:#1e8449;font-weight:600;font-size:14px;" data-i18n="commerce_completed">
+            Order completed successfully!
           </span>
           {% elif order.status == 'rejected' %}
-          <span style="color:#dc3545;font-size:14px;">Order was rejected.</span>
+          <span style="color:#dc3545;font-size:14px;" data-i18n="commerce_rejected">Order was rejected.</span>
           {% endif %}
         </div>
       </div>
@@ -259,7 +258,7 @@
   <div class="empty-state">
     <div style="font-size:80px;">📬</div>
     <h3 class="fw-bold mt-3" style="color:#1a3a2a;" data-i18n="farmer_orders_none">No orders yet</h3>
-    <p class="text-muted">When buyers order your products, they'll appear here.</p>
+    <p class="text-muted" data-i18n="commerce_farmer_empty">When buyers order your products, they'll appear here.</p>
     <a href="{{ url_for('marketplace.my_products') }}"
        class="btn fw-bold mt-3"
        style="background:linear-gradient(135deg,#2ed573,#1e8449);color:white;border-radius:12px;padding:12px 32px;"

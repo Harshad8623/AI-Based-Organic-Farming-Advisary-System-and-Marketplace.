@@ -6,6 +6,8 @@ Supports two roles: 'farmer' and 'buyer'.
 """
 
 import re
+from urllib.parse import urlsplit
+from sqlalchemy.exc import IntegrityError
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -35,28 +37,36 @@ def register():
 
         # Validate role — only farmer or buyer are allowed
         if role not in ('farmer', 'buyer'):
-            role = 'buyer'  # Default to buyer for any invalid role attempt
+            flash('Choose Farmer or Buyer.', 'danger')
+            return render_template('auth/register.html', selected_role='farmer'), 400
 
         # Basic validation
         if not name or not email or not password:
             flash('All fields are required.', 'danger')
             return render_template('auth/register.html', selected_role=role)
 
-        if not _EMAIL_RE.match(email):
+        if len(email) > 120 or not _EMAIL_RE.fullmatch(email):
             flash('Please enter a valid email address.', 'danger')
             return render_template('auth/register.html', selected_role=role)
 
-        if len(name.strip()) < 2:
-            flash('Name must be at least 2 characters.', 'danger')
+        if not 2 <= len(name) <= 100:
+            flash('Name must be between 2 and 100 characters.', 'danger')
             return render_template('auth/register.html', selected_role=role)
 
-        if len(password) < 6:
-            flash('Password must be at least 6 characters.', 'danger')
+        if not 8 <= len(password) <= 128:
+            flash('Password must be between 8 and 128 characters.', 'danger')
             return render_template('auth/register.html', selected_role=role)
 
         if password != confirm:
             flash('Passwords do not match.', 'danger')
             return render_template('auth/register.html', selected_role=role)
+
+        location = request.form.get('location', '').strip()
+        phone = request.form.get('phone', '').strip()
+        soil_type = request.form.get('soil_type', '').strip()
+        if len(location) > 200 or len(soil_type) > 100 or (phone and not re.fullmatch(r'[+\d ()-]{7,20}', phone)):
+            flash('Check your location and phone number.', 'danger')
+            return render_template('auth/register.html', selected_role=role), 400
 
         if User.query.filter_by(email=email).first():
             flash('Email already registered. Please log in.', 'warning')
@@ -66,22 +76,27 @@ def register():
         hashed_pw = generate_password_hash(password)
         user = User(name=name, email=email, password=hashed_pw, role=role)
         db.session.add(user)
-        db.session.flush()  # get user.id before commit
+        try:
+            db.session.flush()  # get user.id before commit
+        except IntegrityError:
+            db.session.rollback()
+            flash('Email already registered. Please log in.', 'warning')
+            return redirect(url_for('auth.login'))
 
         # Create the appropriate profile
         if role == 'farmer':
             profile = FarmerProfile(
                 user_id=user.id,
-                farm_location=request.form.get('location', ''),
-                soil_type=request.form.get('soil_type', ''),
-                phone=request.form.get('phone', '')
+                farm_location=location,
+                soil_type=soil_type,
+                phone=phone
             )
             db.session.add(profile)
         else:
             profile = BuyerProfile(
                 user_id=user.id,
-                location=request.form.get('location', ''),
-                phone=request.form.get('phone', '')
+                location=location,
+                phone=phone
             )
             db.session.add(profile)
 
@@ -105,14 +120,16 @@ def login():
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
 
-        user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=email).first() if len(email) <= 120 and len(password) <= 128 else None
 
         if user and check_password_hash(user.password, password):
+            session.clear()
             login_user(user, remember=request.form.get('remember') == 'on')
-            flash(f'Welcome back, {user.name}!', 'success')
-            next_page = request.args.get('next')
+            flash('You are signed in.', 'success')
+            next_page = request.form.get('next') or request.args.get('next')
             # Security: Only allow relative redirects (prevent open redirect)
-            if next_page and (not next_page.startswith('/') or next_page.startswith('//')):
+            if next_page and (not next_page.startswith('/') or next_page.startswith('//') or '\\' in next_page or
+                              any(ord(c) < 32 for c in next_page) or urlsplit(next_page).netloc):
                 next_page = None
             return redirect(next_page or _dashboard_url(user))
         else:
@@ -124,11 +141,12 @@ def login():
 # ---------------------------------------------------------------------------
 # Logout
 # ---------------------------------------------------------------------------
-@auth_bp.route('/logout')
+@auth_bp.route('/logout', methods=['POST'])
 @login_required
 def logout():
     """Log out the current user."""
     logout_user()
+    session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
 

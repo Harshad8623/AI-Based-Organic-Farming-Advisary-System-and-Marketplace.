@@ -1,166 +1,55 @@
 {% extends "base.html" %}
 {% block title %}Edit {{ product.name }} — KrishiAI{% endblock %}
-
 {% block content %}
-<div class="container" style="max-width:680px;">
-
-  <!-- Breadcrumb -->
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item">
-        <a href="{{ url_for('marketplace.my_products') }}" class="text-success">
-          <i class="bi bi-list-ul me-1"></i>My Products
-        </a>
-      </li>
-      <li class="breadcrumb-item active">Edit Product</li>
-    </ol>
-  </nav>
-
-  <div class="card shadow-sm border-0" style="border-radius:18px;overflow:hidden;">
-
-    <!-- Header -->
-    <div class="card-header text-white d-flex align-items-center gap-3 py-3"
-         style="background:linear-gradient(135deg,#2d6a4f,#1a5c34);">
-      <div style="width:44px;height:44px;background:rgba(255,255,255,.15);border-radius:12px;
-                  display:flex;align-items:center;justify-content:center;font-size:22px;">
-        ✏️
-      </div>
-      <div>
-        <div class="fw-bold fs-5">Edit Product</div>
-        <div style="font-size:13px;opacity:.75;">Update your listing details</div>
-      </div>
-    </div>
-
+<div class="container" style="max-width:740px">
+  <a class="btn btn-outline-success mb-3" href="{{ url_for('marketplace.my_products') }}" data-i18n="market_my_listings">My Listings</a>
+  <div class="card shadow-sm">
     <div class="card-body p-4">
-
-      <form method="POST" enctype="multipart/form-data"
-            action="{{ url_for('marketplace.edit_product', product_id=product.id) }}">
-
-        <!-- Current image preview -->
-        <div class="text-center mb-4">
-          {% if product.image_filename %}
-          <img src="/static/uploads/{{ product.image_filename }}"
-               id="imgPreview"
-               style="width:110px;height:110px;object-fit:cover;border-radius:14px;
-                      border:3px solid #2d6a4f;box-shadow:0 4px 16px rgba(45,106,79,.2);"
-               alt="{{ product.name }}" />
-          {% else %}
-          <div id="imgPreview"
-               style="width:110px;height:110px;border-radius:14px;background:#e8f5e9;
-                      border:3px dashed #2d6a4f;display:flex;align-items:center;
-                      justify-content:center;font-size:40px;margin:0 auto;">
-            🌿
+      <h1 class="h3" data-i18n="commerce_edit">Edit product</h1>
+      <p class="text-muted" data-i18n="commerce_edit_note">Keep your price and available stock up to date.</p>
+      <form method="POST" enctype="multipart/form-data" action="{{ url_for('marketplace.edit_product', product_id=product.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label for="product-name" class="form-label fw-semibold" data-i18n="add_product_name_label">Product Name *</label>
+          <input id="product-name" class="form-control" name="name" value="{{ request.form.get('name', product.name) }}" minlength="2" maxlength="100" required>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <label for="product-price" class="form-label fw-semibold" data-i18n="add_product_price_label">Price (₹ per unit) *</label>
+            <input id="product-price" class="form-control" type="number" name="price" value="{{ request.form.get('price', product.price) }}" min="0.01" max="1000000" step="0.01" required>
           </div>
-          {% endif %}
-          <div class="mt-2">
-            <label for="image" class="btn btn-outline-success btn-sm" style="border-radius:10px;">
-              <i class="bi bi-camera me-1"></i>Change Photo
-            </label>
-            <input type="file" id="image" name="image"
-                   accept="image/jpeg,image/png,image/webp"
-                   class="d-none" onchange="previewImg(event)" />
-            <div class="text-muted mt-1" style="font-size:11px;">JPG, PNG, WEBP · max 16MB</div>
+          <div class="col-sm-6">
+            <label for="product-stock" class="form-label fw-semibold" data-i18n="add_product_qty_label">Available Quantity *</label>
+            <input id="product-stock" class="form-control" name="quantity" value="{{ request.form.get('quantity', product.quantity) }}" maxlength="50" aria-describedby="stock-help stock-note" required>
           </div>
         </div>
-
-        <div class="row g-3">
-
-          <!-- Product Name -->
-          <div class="col-12">
-            <label class="form-label fw-semibold">
-              <i class="bi bi-tag me-1 text-success"></i>Product Name <span class="text-danger">*</span>
-            </label>
-            <input type="text" class="form-control" name="name"
-                   value="{{ product.name }}" required
-                   style="border-radius:10px;" />
-          </div>
-
-          <!-- Price & Quantity -->
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">
-              <i class="bi bi-currency-rupee me-1 text-success"></i>Price (₹) <span class="text-danger">*</span>
-            </label>
-            <div class="input-group">
-              <span class="input-group-text" style="border-radius:10px 0 0 10px;">₹</span>
-              <input type="number" class="form-control" name="price"
-                     value="{{ product.price }}" step="0.01" min="0" required
-                     style="border-radius:0 10px 10px 0;" />
-            </div>
-          </div>
-
-          <div class="col-md-6">
-            <label class="form-label fw-semibold">
-              <i class="bi bi-boxes me-1 text-success"></i>Quantity <span class="text-danger">*</span>
-            </label>
-            <input type="text" class="form-control" name="quantity"
-                   value="{{ product.quantity }}"
-                   placeholder="e.g. 100 kg" required
-                   style="border-radius:10px;" />
-          </div>
-
-          <!-- Category -->
-          <div class="col-12">
-            <label class="form-label fw-semibold">
-              <i class="bi bi-grid me-1 text-success"></i>Category
-            </label>
-            <select class="form-select" name="category" style="border-radius:10px;">
-              <option value="">— Select Category —</option>
-              {% set cats = ['Vegetables','Fruits','Grains','Pulses','Spices','Dairy','Herbs','Seeds','Fertilizers','Other'] %}
-              {% for c in cats %}
-              <option value="{{ c }}" {% if product.category == c %}selected{% endif %}>{{ c }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <!-- Description -->
-          <div class="col-12">
-            <label class="form-label fw-semibold">
-              <i class="bi bi-text-paragraph me-1 text-success"></i>Description
-            </label>
-            <textarea class="form-control" name="description" rows="4"
-                      placeholder="Describe your product — freshness, origin, certifications…"
-                      style="border-radius:10px;resize:none;">{{ product.description or '' }}</textarea>
-          </div>
-
+        <p id="stock-help" class="form-text" data-i18n="commerce_stock_help">Use a number and unit, such as 100 kg or 20 pieces. The price is for one of that unit. Orders use whole units.</p>
+        <p id="stock-note" class="form-text" data-i18n="commerce_stock_note">Enter the stock currently available, excluding quantities already ordered.</p>
+        <div class="mb-3">
+          <label for="product-category" class="form-label fw-semibold" data-i18n="add_product_category_label">Category</label>
+          <select id="product-category" class="form-select" name="category">
+            <option value="" data-i18n="add_product_category_ph">Select category</option>
+            {% for category in ['Vegetables','Fruits','Grains','Pulses','Spices','Dairy','Herbs','Seeds','Fertilizers','Other'] %}
+            <option value="{{ category }}" {% if request.form.get('category', product.category) == category %}selected{% endif %} data-i18n="commerce_category_{{ category|lower }}">{{ category }}</option>
+            {% endfor %}
+          </select>
         </div>
-
-        <!-- Action buttons -->
-        <div class="d-flex gap-3 mt-4">
-          <button type="submit" class="btn btn-success flex-grow-1 fw-bold py-2"
-                  style="border-radius:12px;background:linear-gradient(135deg,#2ed573,#1e8449);border:none;">
-            <i class="bi bi-check-circle me-2"></i>Save Changes
-          </button>
-          <a href="{{ url_for('marketplace.my_products') }}"
-             class="btn btn-outline-secondary fw-semibold py-2"
-             style="border-radius:12px;">
-            Cancel
-          </a>
+        <div class="mb-3">
+          <label for="product-description" class="form-label fw-semibold" data-i18n="add_product_desc_label">Description</label>
+          <textarea id="product-description" class="form-control" name="description" maxlength="3000" rows="4">{{ request.form.get('description', product.description or '') }}</textarea>
         </div>
-
+        <div class="mb-4">
+          <label for="product-image" class="form-label fw-semibold" data-i18n="add_product_image_label">Product Image</label>
+          <input id="product-image" class="form-control" type="file" name="image" accept="image/jpeg,image/png,image/webp">
+          <p class="form-text" data-i18n="commerce_image_note">Optional JPG, PNG or WebP, up to 16 MB and 20 megapixels. Leave empty to keep the current photo.</p>
+          {% if product.image_filename %}<img src="{{ url_for('static', filename='uploads/' + product.image_filename) }}" alt="{{ product.name }}" class="img-thumbnail" style="max-height:150px">{% endif %}
+        </div>
+        <div class="d-flex gap-3 flex-wrap">
+          <button class="btn btn-success" type="submit" data-i18n="commerce_save">Save changes</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('marketplace.my_products') }}" data-i18n="add_product_cancel">Cancel</a>
+        </div>
       </form>
     </div>
   </div>
 </div>
-
-<script>
-function previewImg(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const prev = document.getElementById('imgPreview');
-    if (prev.tagName === 'IMG') {
-      prev.src = ev.target.result;
-    } else {
-      // Replace placeholder div with an img
-      const img = document.createElement('img');
-      img.id = 'imgPreview';
-      img.style.cssText = 'width:110px;height:110px;object-fit:cover;border-radius:14px;border:3px solid #2d6a4f;box-shadow:0 4px 16px rgba(45,106,79,.2);';
-      img.src = ev.target.result;
-      prev.replaceWith(img);
-    }
-  };
-  reader.readAsDataURL(file);
-}
-</script>
 {% endblock %}

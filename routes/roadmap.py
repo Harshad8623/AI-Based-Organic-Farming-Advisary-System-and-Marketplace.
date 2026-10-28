@@ -25,7 +25,14 @@ def detail(slug):
     stages = []
     if crop.stages_json:
         try:
-            stages = json.loads(crop.stages_json)
-        except Exception:
+            loaded = json.loads(crop.stages_json)
+            if isinstance(loaded, list):
+                stages = [
+                    {'stage': item.get('stage', ''), 'days': item.get('days', ''),
+                     'actions': [text for text in item.get('actions', []) if isinstance(text, str)] if isinstance(item.get('actions'), list) else [],
+                     'tips': [text for text in item.get('tips', []) if isinstance(text, str)] if isinstance(item.get('tips'), list) else []}
+                    for item in loaded if isinstance(item, dict) and isinstance(item.get('stage'), str)
+                ]
+        except (ValueError, TypeError):
             stages = []
     return render_template('roadmap/detail.html', crop=crop, stages=stages)

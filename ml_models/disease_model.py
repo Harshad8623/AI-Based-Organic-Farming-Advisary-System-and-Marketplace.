@@ -207,7 +207,7 @@ def get_disease_by_name(name):
     for d in DISEASE_DB:
         if d['name'].lower() == name_lower:
             return d
-    return DISEASE_DB[-1]  # Default to Healthy Plant
+    return None  # An unknown label must never become a healthy diagnosis.
 
 
 def _gemini_vision_predict(image_path, api_key):
@@ -227,7 +227,7 @@ def _gemini_vision_predict(image_path, api_key):
                 'png': 'image/png', 'webp': 'image/webp', 'gif': 'image/gif'}
     mime = mime_map.get(ext, 'image/jpeg')
 
-    prompt = """You are an expert plant pathologist AI. Carefully look at this image.
+    prompt = """You help triage crop photographs. A photograph cannot confirm a diagnosis. Carefully look at this image. Do not claim certainty or prescribe chemical or homemade treatment doses.
 
 STEP 1 — Is this a plant/leaf/crop image?
 If NO (e.g. it's a person, animal, object, or non-plant photo), respond EXACTLY:
@@ -245,10 +245,10 @@ SOLUTION_3: <organic treatment 3>
 SOLUTION_4: <organic treatment 4>
 
 Known diseases: Early Blight, Late Blight, Powdery Mildew, Leaf Rust, Bacterial Blight of Rice, Yellow Mosaic Virus, Fusarium Wilt, Anthracnose, Downy Mildew, Leaf Curl, Rice Blast, Brown Spot, Cercospora Leaf Spot, Healthy Plant.
-If the disease doesn't match any known ones, use the closest match or describe a new one."""
+If uncertain or not matching a known disease, use 'Unable to identify'. Never force a closest match. Solutions must be observation, hygiene, or consulting a local agricultural expert; do not prescribe substances or doses."""
 
     # Try models in order
-    models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+    models = ["gemini-2.5-flash"]
     last_error = None
 
     for model in models:
@@ -265,12 +265,12 @@ If the disease doesn't match any known ones, use the closest match or describe a
             }]
         }
         try:
-            resp = requests.post(url, json=payload, timeout=30)
+            resp = requests.post(url, json=payload, timeout=12)
             if resp.status_code == 200:
                 text = resp.json()['candidates'][0]['content']['parts'][0]['text'].strip()
 
                 # Not a plant image
-                if 'NOT_A_PLANT' in text:
+                if text == 'NOT_A_PLANT':
                     return {
                         "name": "❌ Not a Plant Image",
                         "crops": "N/A",
@@ -300,10 +300,13 @@ If the disease doesn't match any known ones, use the closest match or describe a
                 ]
                 solutions = [s for s in solutions if s]  # remove empty
 
-                disease_name = parse_field('DISEASE_NAME', 'Unknown Disease')
-                severity     = parse_field('SEVERITY', 'medium').lower()
+                disease_name = parse_field('DISEASE_NAME')
+                symptoms = parse_field('SYMPTOMS')
+                if not disease_name or not symptoms:
+                    raise ValueError('Incomplete image analysis response')
+                severity     = parse_field('SEVERITY', 'unknown').lower()
                 if severity not in ('low', 'medium', 'high', 'none'):
-                    severity = 'medium'
+                    severity = 'unknown'
 
                 # Try to enrich with DB entry if name matches
                 db_entry = get_disease_by_name(disease_name)
@@ -333,48 +336,48 @@ If the disease doesn't match any known ones, use the closest match or describe a
     raise RuntimeError(f"All Gemini models failed: {last_error}")
 
 
+TRIAGE_STEPS = [
+    "Photograph both sides of affected leaves and the whole plant in daylight.",
+    "Record the crop, variety, affected area, symptoms, and when they started.",
+    "Avoid moving affected planting material; clean tools between plants.",
+    "Ask your local KVK or agricultural extension officer to confirm the cause before treatment. Follow the registered product label and organic certification rules.",
+]
+
+
 def predict_disease(image_path, api_key=None):
-    """
-    Predict plant disease from an image.
+    """Return tentative model observations, or an explicit unavailable result.
 
-    Priority chain:
-      1. CNN (PlantVillage)  — if model files exist (plant_disease_model.onnx)
-                               Accuracy: ~95-99% on trained diseases
-                               Works offline, no API key needed
-      2. Gemini Vision AI    — if GEMINI_API_KEY is set
-                               Accuracy: ~85-92% on real-world photos
-                               Works on any plant, any disease
-      3. Demo fallback       — deterministic hash-based result
-                               Accuracy: 0% (for UI testing only)
-
-    Returns a dict matching DISEASE_DB structure with extra keys:
-        ai_powered (bool), engine (str), confidence (float, CNN only)
+    No arbitrary label is generated when both analysis engines are unavailable.
+    Model scores are uncalibrated class scores, not diagnostic probabilities.
     """
-    # ── Priority 1: CNN model ────────────────────────────────────────────────
+    import logging
+    result = None
     try:
         from ml_models.plant_disease_cnn import cnn_available, cnn_predict
         if cnn_available():
             result = cnn_predict(image_path)
-            result['engine'] = result.get('engine', 'CNN (PlantVillage)')
-            return result
-    except Exception as e:
-        print(f"[Disease] CNN error (falling back to Gemini): {e}")
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Local image analysis unavailable (%s)", type(exc).__name__)
 
-    # ── Priority 2: Gemini Vision ────────────────────────────────────────────
-    if api_key:
+    if result is None and api_key:
         try:
-            return _gemini_vision_predict(image_path, api_key)
-        except Exception as e:
-            print(f"[Disease AI] Gemini error: {e}")
+            result = _gemini_vision_predict(image_path, api_key)
+            result['engine'] = 'Gemini Vision'
+        except Exception as exc:
+            # Never log exception text: requests exceptions may contain the API key.
+            logging.getLogger(__name__).warning("Remote image analysis unavailable (%s)", type(exc).__name__)
 
-    # ── Priority 3: Demo fallback ─────────────────────────────────────────────
-    import hashlib
-    with open(image_path, 'rb') as f:
-        file_hash = int(hashlib.md5(f.read()).hexdigest(), 16)
-    # Exclude last entry (Healthy Plant) from random selection in demo mode
-    idx = file_hash % (len(DISEASE_DB) - 1)
-    result = dict(DISEASE_DB[idx])
-    result['ai_powered'] = False
-    result['engine']     = 'Demo (No model / API key)'
-    result['confidence'] = None
+    if result is None:
+        return {
+            'name': 'Analysis unavailable', 'available': False,
+            'symptoms': 'No image analysis service is available. No disease has been identified.',
+            'organic_solutions': list(TRIAGE_STEPS), 'severity': 'unknown',
+            'confidence': None, 'ai_powered': False, 'engine': None,
+        }
+    result['available'] = True
+    result['tentative'] = True
+    # Prevent a generated or mismatched knowledge-base prescription from becoming
+    # treatment advice before a qualified person confirms the diagnosis.
+    result['organic_solutions'] = list(TRIAGE_STEPS)
+    result.setdefault('confidence', None)
     return result

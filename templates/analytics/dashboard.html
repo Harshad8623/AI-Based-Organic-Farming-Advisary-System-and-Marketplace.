@@ -1,127 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Analytics Dashboard — KrishiAI{% endblock %}
-
-{% block head_extra %}
-<script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
-{% endblock %}
-
+{% block title %}Farm insights — KrishiAI{% endblock %}
 {% block content %}
-<div class="container">
-
-  <h2 class="fw-bold text-success mb-1"><i class="bi bi-bar-chart-line me-2"></i>Analytics Dashboard</h2>
-  <p class="text-muted mb-4">Agricultural insights, marketplace trends, and farming analytics.</p>
-
-  <!-- Stats Row -->
+<div class="container py-3">
+  <h1 class="h2 text-success fw-bold" data-i18n="insights_title">Your farm insights</h1>
+  <p class="text-muted" data-i18n="insights_note">Real records from this platform. Your order activity is private to your account.</p>
   <div class="row g-3 mb-4">
-    <div class="col-md-3">
-      <div class="card text-center stat-card">
-        <div class="card-body">
-          <div class="stat-num text-success">{{ stats.total_farmers }}</div>
-          <div class="text-muted">Farmers</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center stat-card">
-        <div class="card-body">
-          <div class="stat-num text-primary">{{ stats.total_buyers }}</div>
-          <div class="text-muted">Buyers</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center stat-card">
-        <div class="card-body">
-          <div class="stat-num text-warning">{{ stats.total_products }}</div>
-          <div class="text-muted">Products Listed</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <div class="card text-center stat-card">
-        <div class="card-body">
-          <div class="stat-num text-danger">₹{{ stats.avg_price }}</div>
-          <div class="text-muted">Avg. Price</div>
-        </div>
-      </div>
-    </div>
+    {% for key, value in stats.items() %}<div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body"><strong class="fs-2">{{ value }}</strong><p class="mb-0" data-i18n="insights_{{ key }}">{{ key.replace('_',' ').title() }}</p></div></div></div>{% endfor %}
   </div>
-
-  <!-- Charts Row 1 -->
-  <div class="row g-4 mb-4">
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light fw-semibold">Product Categories Distribution</div>
-        <div class="card-body">
-          <div id="chart_category" style="height:280px;"></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light fw-semibold">Average Price by Category (₹)</div>
-        <div class="card-body">
-          <div id="chart_price" style="height:280px;"></div>
-        </div>
-      </div>
-    </div>
+  <div class="row g-4">
+    <section class="col-lg-4"><div class="card"><div class="card-body">
+      <h2 class="h5" data-i18n="insights_categories">Marketplace categories</h2>
+      {% if categories %}<ul class="list-group list-group-flush">{% for category, count in categories %}<li class="list-group-item d-flex justify-content-between gap-3"><span>{{ category or 'Other' }}</span><strong>{{ count }}</strong></li>{% endfor %}</ul>
+      {% else %}<p class="text-muted" data-i18n="insights_empty">No listings yet. Counts will appear when farmers list products.</p>{% endif %}
+    </div></div><div class="card mt-3"><div class="card-body"><h2 class="h5" data-i18n="insights_status">Your order status</h2><ul class="list-group list-group-flush">{% for status, count in statuses.items() %}<li class="list-group-item d-flex justify-content-between"><span data-i18n="insights_{{ status }}">{{ status.title() }}</span><strong>{{ count }}</strong></li>{% endfor %}</ul></div></div></section>
+    <section class="col-lg-8"><div class="card"><div class="card-body">
+      <h2 class="h5" data-i18n="insights_months">Your last 12 months</h2>
+      <p class="small text-muted" data-i18n="insights_month_note">Grouped by order creation month (UTC). Amounts include delivered orders only; they are not a profit calculation or proof of payment.</p>
+      <div class="table-responsive"><table class="table align-middle"><caption data-i18n="insights_table_caption">Your monthly order activity</caption><thead><tr><th scope="col" data-i18n="insights_month">Month</th><th scope="col" data-i18n="insights_orders">Orders</th><th scope="col" data-i18n="insights_delivered">Delivered</th><th scope="col" data-i18n="insights_amount">Delivered value (₹)</th></tr></thead><tbody>{% for month in monthly %}<tr><th scope="row">{{ month.label }}</th><td>{{ month.orders }}</td><td>{{ month.delivered }}</td><td>₹{{ '%.2f'|format(month.amount) }}</td></tr>{% endfor %}</tbody></table></div>
+      {% if current_user.is_farmer() %}<a href="{{ url_for('farm_tools.index') }}" class="btn btn-outline-success" data-i18n="insights_ledger">Open income & expense book</a>{% endif %}
+    </div></div></section>
   </div>
-
-  <!-- Charts Row 2 -->
-  <div class="row g-4 mb-4">
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light fw-semibold">User Registrations (Last 12 Months)</div>
-        <div class="card-body">
-          <div id="chart_registrations" style="height:280px;"></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light fw-semibold">Soil Fertility Index by Type</div>
-        <div class="card-body">
-          <div id="chart_soil" style="height:280px;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Charts Row 3 -->
-  <div class="row g-4 mb-4">
-    <div class="col-12">
-      <div class="card shadow-sm">
-        <div class="card-header bg-light fw-semibold">Average Yield Trend — Organic Farming (Tonnes/Acre)</div>
-        <div class="card-body">
-          <div id="chart_yield" style="height:280px;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </div>
-
-<script>
-const config = {responsive: true, displayModeBar: false};
-
-Plotly.newPlot('chart_category',
-  {{ charts.category_distribution | safe }}.data,
-  {{ charts.category_distribution | safe }}.layout, config);
-
-Plotly.newPlot('chart_price',
-  {{ charts.price_by_category | safe }}.data,
-  {{ charts.price_by_category | safe }}.layout, config);
-
-Plotly.newPlot('chart_registrations',
-  {{ charts.monthly_registrations | safe }}.data,
-  {{ charts.monthly_registrations | safe }}.layout, config);
-
-Plotly.newPlot('chart_soil',
-  {{ charts.soil_fertility | safe }}.data,
-  {{ charts.soil_fertility | safe }}.layout, config);
-
-Plotly.newPlot('chart_yield',
-  {{ charts.yield_trend | safe }}.data,
-  {{ charts.yield_trend | safe }}.layout, config);
-</script>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/analytics-i18n.js') }}"></script>{% endblock %}

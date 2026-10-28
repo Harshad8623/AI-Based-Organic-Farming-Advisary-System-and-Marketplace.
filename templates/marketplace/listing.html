@@ -70,7 +70,7 @@
 <!-- Hero -->
 <div class="marketplace-hero">
   <h1 data-i18n="market_heading">🛍️ Organic Marketplace</h1>
-  <p data-i18n="market_subtitle">Buy directly from verified organic farmers — no middlemen, freshest produce</p>
+  <p data-i18n="market_subtitle">Buy directly from local farmers. Ask sellers about growing practices and certification.</p>
 </div>
 
 <div class="container">
@@ -79,20 +79,28 @@
     <form method="GET" action="{{ url_for('marketplace.listing') }}" class="row g-2 align-items-center" id="searchForm">
       <div class="col-md-5">
         <div class="input-group">
-          <input type="text" class="form-control" name="search" id="search-input"
+          <input type="text" class="form-control" name="search" id="search-input" aria-label="Search products"
                  data-i18n-placeholder="market_search_ph"
                  placeholder="🔍 Search tomato, potato, rice..." value="{{ search }}" />
-          <button type="button" onclick="toggleSearchVoice()" class="btn btn-outline-success" id="searchVoiceBtn" title="Speak search">
+          <button type="button" onclick="toggleSearchVoice()" class="btn btn-outline-success" id="searchVoiceBtn" title="Speak search" aria-label="Speak search">
             <i class="bi bi-mic" id="searchVoiceIcon"></i>
           </button>
         </div>
       </div>
       <div class="col-md-3">
-        <select class="form-select" name="category">
+        <select class="form-select" name="category" aria-label="Category">
           <option value="" data-i18n="market_all_categories">All Categories</option>
           {% for cat in categories %}
             <option value="{{ cat }}" {% if cat == selected_category %}selected{% endif %}>{{ cat }}</option>
           {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="product-sort" class="visually-hidden" data-i18n="commerce_sort">Sort products</label>
+        <select name="sort" id="product-sort" class="form-select">
+          <option value="newest" {% if selected_sort == 'newest' %}selected{% endif %} data-i18n="commerce_newest">Newest first</option>
+          <option value="price_low" {% if selected_sort == 'price_low' %}selected{% endif %} data-i18n="commerce_price_low">Price: low to high</option>
+          <option value="price_high" {% if selected_sort == 'price_high' %}selected{% endif %} data-i18n="commerce_price_high">Price: high to low</option>
         </select>
       </div>
       <div class="col-md-2">
@@ -122,7 +130,7 @@
   {% if products %}
   <div class="row g-4">
     {% for p in products %}
-    <div class="col-6 col-md-4 col-lg-3">
+    <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
       <div class="product-card">
         {% if p.image_filename %}
           <img src="/static/uploads/{{ p.image_filename }}" class="product-img" alt="{{ p.name }}" />
@@ -149,7 +157,7 @@
             {% endif %}
           </div>
 
-          <p class="fw-bold mb-1" style="color:#1e8449;font-size:1rem;">₹{{ p.price }} / unit</p>
+          <p class="fw-bold mb-1" style="color:#1e8449;font-size:1rem;">₹{{ "%.2f"|format(p.price) }} / {{ p.stock_unit }}</p>
           <p class="text-muted small mb-1">📦 {{ p.quantity }}</p>
 
           {% if p.description %}
@@ -161,10 +169,11 @@
           </p>
 
           <!-- Actions -->
-          {% if current_user.is_authenticated and current_user.is_buyer() %}
+          {% if current_user.is_authenticated and current_user.is_buyer() and p.purchase_limit > 0 %}
           <form method="POST" action="{{ url_for('cart.add_to_cart', product_id=p.id) }}" class="d-flex gap-1 mb-2">
-            <select name="quantity" class="qty-select form-select">
-              {% for q in range(1, 11) %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <select name="quantity" class="qty-select form-select" aria-label="Quantity" data-i18n-aria="commerce_quantity">
+              {% for q in range(1, [p.purchase_limit, 10]|min + 1) %}
               <option value="{{ q }}">{{ q }}</option>
               {% endfor %}
             </select>
@@ -172,6 +181,8 @@
               🛒 Add to Cart
             </button>
           </form>
+          {% elif p.purchase_limit == 0 %}
+          <p class="small text-muted" data-i18n="commerce_sold_out">Unavailable for online ordering</p>
           {% elif not current_user.is_authenticated %}
           <a href="{{ url_for('auth.login') }}" class="btn-add-cart mb-2" style="display:block;text-align:center;text-decoration:none;" data-i18n="market_login_to_buy">
             🔐 Login to Buy

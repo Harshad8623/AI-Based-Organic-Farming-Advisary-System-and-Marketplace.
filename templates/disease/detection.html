@@ -1,253 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Disease Detection — KrishiAI{% endblock %}
-
-{% block head_extra %}
-<style>
-  .confidence-bar-wrap { background:#e9ecef; border-radius:8px; height:10px; overflow:hidden; }
-  .confidence-bar      { height:100%; border-radius:8px; transition:width 0.8s ease;
-                         background:linear-gradient(90deg,#2ed573,#1e8449); }
-  .confidence-bar.medium { background:linear-gradient(90deg,#ffa502,#e67e22); }
-  .confidence-bar.low    { background:linear-gradient(90deg,#ff6b6b,#c0392b); }
-
-  .engine-badge-cnn    { background:linear-gradient(135deg,#0f3460,#16213e); color:white;
-                         border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; }
-  .engine-badge-gemini { background:linear-gradient(135deg,#4285f4,#34a853); color:white;
-                         border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; }
-  .engine-badge-demo   { background:#6c757d; color:white;
-                         border-radius:20px; padding:4px 12px; font-size:11px; font-weight:700; }
-
-  .top3-item { background:#f8f9fa; border-radius:10px; padding:8px 14px;
-               margin-bottom:6px; display:flex; align-items:center; gap:10px; }
-  .top3-rank { font-weight:800; color:#2d6a4f; min-width:24px; }
-
-  .severity-badge-high   { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
-  .severity-badge-medium { background:#fff3cd; color:#856404; border:1px solid #ffeeba; }
-  .severity-badge-low    { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
-  .severity-badge-none   { background:#d1ecf1; color:#0c5460; border:1px solid #bee5eb; }
-  .severity-badge { border-radius:20px; padding:3px 12px; font-size:12px; font-weight:700; display:inline-block; }
-</style>
-{% endblock %}
-
+{% block title %}Leaf health check — KrishiAI{% endblock %}
 {% block content %}
 <div class="container">
-
-  <h2 class="fw-bold text-success mb-1"><i class="bi bi-search me-2"></i><span data-i18n="disease_heading">Plant Disease Detection</span></h2>
-  <p class="text-muted mb-4" data-i18n="disease_subtitle">Upload a clear leaf photo — Gemini Vision AI identifies any plant disease instantly with organic treatment solutions.</p>
-
+  <h1 class="h2 fw-bold text-success" data-i18n="leaf_heading">Leaf health check</h1>
+  <p class="text-muted" data-i18n="leaf_intro">A photo can help you describe a problem. Image analysis is a starting point, not a confirmed diagnosis.</p>
   <div class="row g-4">
-
-    <!-- Upload Form -->
     <div class="col-lg-5">
-      <div class="card shadow-sm">
-        <div class="card-header bg-success text-white">
-          <i class="bi bi-cloud-upload me-1"></i>Upload Leaf Image
-        </div>
-        <div class="card-body">
-          <form method="POST" action="{{ url_for('disease.detect') }}"
-                enctype="multipart/form-data">
-
-            <!-- Drop zone -->
-            <div class="upload-zone mb-3" id="dropZone">
-              <div class="upload-icon">📷</div>
-              <p class="mb-1">Drag &amp; drop or click to upload</p>
-              <small class="text-muted">Supported: JPG, PNG, WEBP (max 16MB)</small>
-              <input type="file" id="leaf_image" name="leaf_image"
-                     accept="image/jpeg,image/png,image/webp" class="file-input"
-                     onchange="previewLeaf(event)" required />
-            </div>
-
-            <!-- Image preview -->
-            <div id="leafPreviewDiv" style="display:none;" class="mb-3 text-center">
-              <img id="leafPreview" src="#" class="img-fluid rounded"
-                   style="max-height:200px;" alt="Preview" />
-            </div>
-
-            <button type="submit" class="btn btn-success w-100" data-i18n="disease_upload_btn">
-              <i class="bi bi-lightning me-1"></i>Detect Disease
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Engine Status Card -->
-      <div class="card mt-3">
-        <div class="card-body p-3">
-          <h6 class="fw-semibold mb-2">🔬 Detection Engines</h6>
-          <div class="d-flex flex-column gap-1" style="font-size:12px;">
-            <div class="d-flex align-items-center gap-2">
-              <span style="width:10px;height:10px;background:#0f3460;border-radius:50%;display:inline-block;"></span>
-              <strong>CNN (PlantVillage)</strong> — 38 diseases, ~99% accuracy
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <span style="width:10px;height:10px;background:#4285f4;border-radius:50%;display:inline-block;"></span>
-              <strong>Gemini Vision AI</strong> — any disease, needs API key
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <span style="width:10px;height:10px;background:#6c757d;border-radius:50%;display:inline-block;"></span>
-              <strong>Demo Mode</strong> — no model/API key
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tips -->
-      <div class="card mt-3">
-        <div class="card-body">
-          <h6 class="fw-semibold">📸 Tips for best results:</h6>
-          <ul class="small text-muted mb-0">
-            <li>Take photo in natural daylight</li>
-            <li>Focus on the affected leaf/area</li>
-            <li>Avoid blurry or dark images</li>
-            <li>Include both sides of the leaf</li>
-          </ul>
-        </div>
-      </div>
+      <section class="card card-body">
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('disease.detect') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label for="leaf_image" class="form-label fw-semibold" data-i18n="leaf_upload_label">Choose a clear leaf photo</label>
+          <input class="form-control mb-2" type="file" id="leaf_image" name="leaf_image" accept="image/jpeg,image/png,image/webp" required aria-describedby="leaf-file-help">
+          <p id="leaf-file-help" class="small text-muted" data-i18n="leaf_formats">JPG, PNG or WEBP, up to 8 MB. Include both sides of the leaf where possible.</p>
+          <p class="small text-muted" data-i18n="leaf_privacy">The photo is used for this check. If remote analysis is enabled, it is sent to the image analysis provider. Avoid faces and personal details.</p>
+          <button type="submit" class="btn btn-success w-100" data-i18n="leaf_check">Check photo</button>
+        </form>
+      </section>
+      <section class="card card-body mt-3">
+        <h2 class="h5" data-i18n="leaf_expert_title">Prepare for expert advice</h2>
+        <ul class="small mb-0 ps-3">
+          <li class="mb-2" data-i18n="leaf_step_photo">Photograph both sides of the affected leaf and the whole plant in daylight.</li>
+          <li class="mb-2" data-i18n="leaf_step_record">Record the crop, variety, affected area and when symptoms started.</li>
+          <li data-i18n="leaf_step_expert">Contact your local KVK or agricultural extension officer before choosing a treatment.</li>
+        </ul>
+      </section>
     </div>
-
-    <!-- Result Panel -->
     <div class="col-lg-7">
-    {% if result %}
-        <!-- Engine + Severity Header -->
-        <div class="card shadow-sm mb-3">
-          <div class="card-header d-flex align-items-center gap-2
-            {% if result.severity == 'high' %}bg-danger
-            {% elif result.severity == 'medium' %}bg-warning
-            {% elif result.severity == 'none' %}bg-success
-            {% else %}bg-secondary{% endif %} text-white">
-            <i class="bi bi-shield-exclamation"></i>
-            <span>Detection Result</span>
-
-            <!-- Engine Badge -->
-            <span class="ms-auto">
-              {% set engine = result.get('engine', '') %}
-              {% if 'CNN' in engine %}
-                <span class="engine-badge-cnn">🧠 {{ engine }}</span>
-              {% elif 'Gemini' in engine or result.get('ai_powered') %}
-                <span class="engine-badge-gemini">🤖 Gemini Vision AI</span>
-              {% else %}
-                <span class="engine-badge-demo">📋 Demo Mode</span>
-              {% endif %}
-            </span>
-          </div>
-
-          <div class="card-body">
-
-            {% if '❌' in result.name %}
-              <!-- Not a plant -->
-              <div class="alert alert-warning d-flex gap-2 align-items-start">
-                <span style="font-size:2rem">🚫</span>
-                <div>
-                  <strong data-translate>{{ result.name }}</strong><br>
-                  <span data-translate>{{ result.symptoms }}</span>
-                </div>
-              </div>
-
-            {% else %}
-              <!-- Disease Result -->
-              <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-2">
-                <h4 class="fw-bold text-success mb-0" data-translate>{{ result.name }}</h4>
-                <span class="severity-badge severity-badge-{{ result.severity }}">
-                  Severity: {{ result.severity.upper() }}
-                </span>
-              </div>
-
-              <!-- Confidence Score (CNN only) -->
-              {% if result.get('confidence') is not none %}
-              {% set conf_pct = (result.confidence * 100)|round(1) %}
-              <div class="mb-3">
-                <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
-                  <span class="fw-semibold">Confidence</span>
-                  <span class="fw-bold" style="color:{% if conf_pct >= 70 %}#1e8449{% elif conf_pct >= 50 %}#e67e22{% else %}#c0392b{% endif %}">
-                    {{ conf_pct }}%
-                  </span>
-                </div>
-                <div class="confidence-bar-wrap">
-                  <div class="confidence-bar {% if conf_pct < 70 %}medium{% endif %}{% if conf_pct < 50 %} low{% endif %}"
-                       style="width:{{ conf_pct }}%;"></div>
-                </div>
-                {% if conf_pct < 60 %}
-                <small class="text-muted" data-translate>Low confidence — consider re-uploading a clearer image or using Gemini Vision.</small>
-                {% endif %}
-              </div>
-              {% endif %}
-
-              <!-- Crop & Cause -->
-              <p class="text-muted small mb-1">
-                <i class="bi bi-tree me-1"></i><strong>Affected crops:</strong> <span data-translate>{{ result.crops }}</span>
-              </p>
-              <p class="text-muted small mb-2">
-                <i class="bi bi-bug me-1"></i><strong>Cause:</strong> <span data-translate>{{ result.cause }}</span>
-              </p>
-
-              <!-- Symptoms -->
-              <div class="alert alert-warning mt-2 py-2">
-                <strong>Symptoms:</strong> <span data-translate>{{ result.symptoms }}</span>
-              </div>
-
-              <!-- Organic Solutions -->
-              <h6 class="fw-semibold mt-3">🌿 Organic Treatment Solutions:</h6>
-              <ol class="mb-0">
-                {% for sol in result.organic_solutions %}
-                  <li class="mb-1 small" data-translate>{{ sol }}</li>
-                {% endfor %}
-              </ol>
-
-              <!-- Top-3 Predictions (CNN only) -->
-              {% if result.get('top3') %}
-              <div class="mt-4">
-                <h6 class="fw-semibold mb-2">📊 Top Predictions</h6>
-                {% for cls, prob in result.top3 %}
-                {% set pct = (prob * 100)|round(1) %}
-                <div class="top3-item">
-                  <span class="top3-rank">#{{ loop.index }}</span>
-                  <div class="flex-grow-1">
-                    <div class="fw-semibold" style="font-size:13px;">
-                      {{ cls.replace('___', ' — ').replace('_', ' ') }}
-                    </div>
-                    <div class="confidence-bar-wrap mt-1">
-                      <div class="confidence-bar" style="width:{{ pct }}%;"></div>
-                    </div>
-                  </div>
-                  <span style="font-size:12px;font-weight:700;min-width:40px;text-align:right;">{{ pct }}%</span>
-                </div>
-                {% endfor %}
-              </div>
-              {% endif %}
-
-            {% endif %}
-          </div>
-        </div>
-
-        <a href="{{ url_for('disease.detect') }}" class="btn btn-outline-success btn-sm">
-          <i class="bi bi-arrow-repeat me-1"></i>Test Another Image
-        </a>
-
-      {% else %}
-        <div class="card h-100 d-flex align-items-center justify-content-center bg-light">
-          <div class="text-center text-muted p-5">
-            <div style="font-size:4rem">🍃</div>
-            <h5 class="mt-3">Upload a leaf photo</h5>
-            <p>Gemini Vision AI will analyse your leaf image and identify any plant disease with organic treatment options.</p>
-          </div>
-        </div>
+      {% if leaf_error %}<div class="alert alert-warning" role="alert" data-i18n="{{ leaf_error }}">The photo could not be checked. Please try again.</div>{% endif %}
+      {% if result %}
+      <section class="card card-body">
+        {% if image_url %}<img src="{{ image_url }}" class="img-fluid rounded mb-3 align-self-center" style="max-height:240px" alt="Uploaded leaf photo">{% endif %}
+        {% if not result.available %}
+          <h2 class="h4" data-i18n="leaf_unavailable">Image analysis is unavailable</h2>
+          <p class="alert alert-info" data-i18n="leaf_no_diagnosis">No disease has been identified. Use the checklist to discuss the symptoms with a local agricultural expert.</p>
+        {% else %}
+          <span class="badge text-bg-warning align-self-start mb-2" data-i18n="leaf_unconfirmed">Unconfirmed image observation</span>
+          <h2 class="h4" data-translate>{{ result.name }}</h2>
+          <p class="small text-muted"><span data-i18n="advice_source">Source</span>: {{ result.engine }}</p>
+          {% if result.symptoms %}<p data-translate>{{ result.symptoms }}</p>{% endif %}
+          {% if result.get('confidence') is not none %}
+            <p class="small"><span data-i18n="leaf_model_score">Model class score</span>: {{ (result.confidence * 100)|round(1) }}%</p>
+            <p class="small text-muted" data-i18n="leaf_score_warning">This score is not the probability of a correct diagnosis. Field photos and unfamiliar crops may produce incorrect results.</p>
+          {% endif %}
+          <div class="alert alert-warning" data-i18n="leaf_treatment_warning">Do not choose a pesticide, dose, or remove a crop based on this result. Ask a qualified local expert to confirm the cause; follow registered product labels and your organic certification rules.</div>
+        {% endif %}
+        <a href="{{ url_for('disease.detect') }}" class="btn btn-outline-success align-self-start" data-i18n="leaf_another">Check another photo</a>
+      </section>
+      {% elif not leaf_error %}
+      <section class="card card-body h-100 text-center justify-content-center py-5">
+        <div class="fs-1" aria-hidden="true">🍃</div>
+        <h2 class="h4" data-i18n="leaf_empty_title">Start with a clear photo</h2>
+        <p class="text-muted mb-0" data-i18n="leaf_empty_text">Use daylight and focus on the affected area. Keep a record of symptoms even when image analysis is unavailable.</p>
+      </section>
       {% endif %}
     </div>
-
   </div>
 </div>
-
-<script>
-function previewLeaf(event) {
-  const file = event.target.files[0];
-  if (file) {
-    document.getElementById('leafPreview').src = URL.createObjectURL(file);
-    document.getElementById('leafPreviewDiv').style.display = 'block';
-    document.getElementById('dropZone').querySelector('p').textContent = file.name;
-  }
-}
-// Click on dropzone triggers file input
-document.getElementById('dropZone').addEventListener('click', () =>
-  document.getElementById('leaf_image').click()
-);
-</script>
 {% endblock %}

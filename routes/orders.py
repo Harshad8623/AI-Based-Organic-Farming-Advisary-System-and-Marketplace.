@@ -9,6 +9,7 @@ Order Management:
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from models import db, Order, Rating, Product
+from commerce import parse_stock, stock_text
 from datetime import datetime, timezone
 
 orders_bp = Blueprint('orders', __name__, url_prefix='/orders')
@@ -50,7 +51,8 @@ def farmer_orders():
 
     orders = Order.query.filter_by(farmer_id=current_user.id)\
                         .order_by(Order.created_at.desc()).all()
-    return render_template('orders/farmer_orders.html', orders=orders)
+    return render_template('orders/farmer_orders.html', orders=orders,
+                           delivered_revenue=sum(order.total_price for order in orders if order.status == 'delivered'))
 
 
 # ---------------------------------------------------------------------------
@@ -73,17 +75,48 @@ def update_status(order_id):
         flash(f'Cannot change status from "{order.status}" to "{new_status}".', 'danger')
         return redirect(url_for('orders.farmer_orders'))
 
-    order.status     = new_status
-    order.updated_at = datetime.now(timezone.utc)
+    if new_status == 'rejected' and order.payment_method == 'razorpay':
+        flash('This order is already paid online. Contact the platform operator to arrange a refund before cancellation; this page cannot issue refunds.', 'warning')
+        return redirect(url_for('orders.farmer_orders'))
+
+    # A conditional status transition makes retries and concurrent requests safe.
+    changed = Order.query.filter_by(id=order.id, status=order.status).update(
+        {Order.status: new_status, Order.updated_at: datetime.now(timezone.utc)}, synchronize_session=False)
+    if changed != 1:
+        db.session.rollback()
+        flash('The order was updated elsewhere. Please review its current status.', 'warning')
+        return redirect(url_for('orders.farmer_orders'))
+    manual_stock_review = False
+    if new_status == 'rejected' and order.product_id:
+        product = db.session.get(Product, order.product_id, populate_existing=True)
+        if product:
+            try:
+                available, unit = parse_stock(product.quantity)
+            except ValueError:
+                manual_stock_review = True
+            else:
+                # Historical orders predate reliable unit snapshots. Never infer
+                # their stock adjustment from an ambiguous, subsequently edited listing.
+                if not order.receipt or order.receipt.unit != unit:
+                    manual_stock_review = True
+                else:
+                    restored = Product.query.filter_by(id=product.id, quantity=product.quantity).update(
+                        {Product.quantity: stock_text(available + order.quantity_ordered, unit)}, synchronize_session=False)
+                    if restored != 1:
+                        db.session.rollback()
+                        flash('Stock changed elsewhere. Please retry this status update.', 'warning')
+                        return redirect(url_for('orders.farmer_orders'))
     db.session.commit()
 
     status_msg = {
-        'accepted':  '✅ Order accepted! The buyer has been notified.',
+        'accepted':  'Order accepted. The buyer can see the update in My Orders.',
         'rejected':  '❌ Order rejected.',
         'shipped':   '🚚 Order marked as shipped!',
         'delivered': '🎉 Order marked as delivered!',
     }
     flash(status_msg.get(new_status, 'Order status updated.'), 'success')
+    if manual_stock_review:
+        flash('This older order or listing has no reliable stock unit. Stock was left unchanged; count your available inventory and update the listing before selling again.', 'warning')
     return redirect(url_for('orders.farmer_orders'))
 
 
@@ -115,14 +148,27 @@ def rate_order(order_id):
 
     if request.method == 'POST':
         try:
-            stars = int(request.form.get('stars', 5))
+            stars = int(request.form.get('stars', ''))
         except (ValueError, TypeError):
             stars = 0
         review = request.form.get('review', '').strip()
 
+        if len(review) > 2000:
+            flash('Review must be 2,000 characters or fewer.', 'danger')
+            return redirect(url_for('orders.rate_order', order_id=order_id))
+
         if stars < 1 or stars > 5:
             flash('Please select a rating between 1 and 5 stars.', 'danger')
             return redirect(url_for('orders.rate_order', order_id=order_id))
+
+        # Claim the order version before inserting a review. This also works
+        # on existing databases without adding a unique index to old ratings.
+        claimed = Order.query.filter_by(id=order.id, updated_at=order.updated_at).update(
+            {Order.updated_at: datetime.now(timezone.utc)}, synchronize_session=False)
+        if claimed != 1:
+            db.session.rollback()
+            flash('This order was updated elsewhere. Please review My Orders before retrying.', 'warning')
+            return redirect(url_for('orders.buyer_orders'))
 
         rating = Rating(
             order_id   = order.id,

@@ -1,357 +1,228 @@
-/**
- * voice_assistant.js
- * ------------------
- * Floating voice assistant for धरती रक्षक platform.
- * Uses Web Speech API for recognition and text-to-speech feedback.
- * Supports English and Hindi commands.
- */
-
-(function () {
+/* Optional voice navigation. Audio starts only after an explicit button press. */
+(() => {
   'use strict';
-
-  // -------------------------------------------------------------------------
-  // Setup
-  // -------------------------------------------------------------------------
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    console.warn('Voice Assistant: SpeechRecognition not supported in this browser.');
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.lang = 'en-IN'; // Indian English, also picks up Hindi words
-
-  let isListening = false;
-
-  // -------------------------------------------------------------------------
-  // Text-to-Speech Helper
-  // -------------------------------------------------------------------------
-  function speak(text) {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-IN';
-    utterance.rate = 1.0;
-    utterance.pitch = 1.1;
-    window.speechSynthesis.speak(utterance);
-  }
-
-  // -------------------------------------------------------------------------
-  // Command Handlers
-  // -------------------------------------------------------------------------
-  const COMMANDS = [
-    {
-      patterns: ['open marketplace', 'marketplace', 'go to market', 'dukaan', 'bazaar'],
-      action: () => { speak('Opening Marketplace'); navigate('/marketplace/'); }
+  const copy = {
+    en: {
+      title: 'Voice navigation', start: 'Use microphone', stop: 'Stop listening',
+      note: 'Optional: tap the microphone, then say a command. Your browser may send audio to its speech service. You can always use the page links instead.',
+      unsupported: 'Voice recognition is not available in this browser. Use the page links to continue.',
+      ready: 'Microphone is off.', listening: 'Listening for one command…', stopped: 'Microphone stopped.',
+      help: 'Voice commands', examples: 'Try “open marketplace”, “my orders”, “farm planner”, “weather”, “go home”, or “search tomato”.',
+      unknown: 'Command not recognised. Open Voice commands for examples, or use a page link.',
+      denied: 'Microphone permission was not granted. Use the page links, or enable microphone access in your browser settings and try again.',
+      noAudio: 'No microphone was found. Use the page links instead.',
+      noSpeech: 'No speech was heard. Tap the microphone to try again.',
+      network: 'The browser speech service could not connect. Check your connection, or use a page link.',
+      failed: 'Voice recognition could not start. Try again, or use a page link.',
+      unavailable: 'That tool is available to farmer accounts. Use your dashboard to continue.',
+      opening: 'Opening', search: 'marketplace search',
+      market: 'marketplace', cart: 'your cart', guides: 'crop guides', assistant: 'farming assistant',
+      weather: 'weather', analytics: 'your farm insights', crop: 'crop options', health: 'plant health',
+      home: 'home', orders: 'your orders', planner: 'farm planner'
     },
-    {
-      patterns: ['open cart', 'my cart', 'cart', 'tokri', 'shopping cart'],
-      action: () => { speak('Opening your cart'); navigate('/cart/'); }
+    hi: {
+      title: 'बोलकर पृष्ठ खोलें', start: 'माइक्रोफ़ोन इस्तेमाल करें', stop: 'सुनना बंद करें',
+      note: 'वैकल्पिक: माइक्रोफ़ोन दबाएँ, फिर निर्देश बोलें। आपका ब्राउज़र आवाज़ अपनी पहचान सेवा को भेज सकता है। आप पृष्ठ के लिंक भी इस्तेमाल कर सकते हैं।',
+      unsupported: 'इस ब्राउज़र में आवाज़ पहचान उपलब्ध नहीं है। आगे बढ़ने के लिए पृष्ठ के लिंक इस्तेमाल करें।',
+      ready: 'माइक्रोफ़ोन बंद है।', listening: 'एक निर्देश सुन रहे हैं…', stopped: 'माइक्रोफ़ोन बंद किया गया।',
+      help: 'बोलने के उदाहरण', examples: 'कहें: “बाज़ार खोलें”, “मेरे ऑर्डर”, “खेती की योजना”, “मौसम दिखाओ”, “मुख्य पृष्ठ”, या “टमाटर खोजें”।',
+      unknown: 'निर्देश समझ नहीं आया। बोलने के उदाहरण देखें या पृष्ठ का लिंक इस्तेमाल करें।',
+      denied: 'माइक्रोफ़ोन की अनुमति नहीं मिली। पृष्ठ के लिंक इस्तेमाल करें या ब्राउज़र सेटिंग में अनुमति देकर फिर कोशिश करें।',
+      noAudio: 'माइक्रोफ़ोन नहीं मिला। पृष्ठ के लिंक इस्तेमाल करें।',
+      noSpeech: 'आवाज़ नहीं सुनाई दी। फिर कोशिश करने के लिए माइक्रोफ़ोन दबाएँ।',
+      network: 'ब्राउज़र की आवाज़ सेवा से संपर्क नहीं हुआ। इंटरनेट जाँचें या पृष्ठ का लिंक इस्तेमाल करें।',
+      failed: 'आवाज़ पहचान शुरू नहीं हुई। फिर कोशिश करें या पृष्ठ का लिंक इस्तेमाल करें।',
+      unavailable: 'यह साधन किसान खातों के लिए है। अपने डैशबोर्ड से आगे बढ़ें।',
+      opening: 'खोल रहे हैं:', search: 'बाज़ार में खोज',
+      market: 'बाज़ार', cart: 'आपकी टोकरी', guides: 'फसल मार्गदर्शिका', assistant: 'खेती सहायक',
+      weather: 'मौसम', analytics: 'आपकी खेती की जानकारी', crop: 'फसल के विकल्प', health: 'पौधों का स्वास्थ्य',
+      home: 'मुख्य पृष्ठ', orders: 'आपके ऑर्डर', planner: 'खेती की योजना'
     },
-    {
-      patterns: ['open roadmap', 'crop roadmap', 'roadmap', 'fasal', 'farming guide', 'guide'],
-      action: () => { speak('Opening Crop Roadmaps'); navigate('/roadmap/'); }
-    },
-    {
-      patterns: ['open chatbot', 'chatbot', 'chat', 'ai help', 'talk to ai'],
-      action: () => { speak('Opening AI Chatbot'); navigate('/chatbot/'); }
-    },
-    {
-      patterns: ['my orders', 'orders', 'order status', 'mera order'],
-      action: () => { speak('Opening your orders'); navigate('/orders/my'); }
-    },
-    {
-      patterns: ['farmer orders', 'incoming orders'],
-      action: () => { speak('Opening farmer orders'); navigate('/orders/farmer'); }
-    },
-    {
-      patterns: ['go home', 'home', 'ghar', 'main page', 'homepage'],
-      action: () => { speak('Going home'); navigate('/'); }
-    },
-    {
-      patterns: ['weather', 'mausam', 'open weather'],
-      action: () => { speak('Opening weather advisory'); navigate('/weather/'); }
-    },
-    {
-      patterns: ['analytics', 'dashboard', 'stats'],
-      action: () => { speak('Opening analytics dashboard'); navigate('/analytics/'); }
-    },
-    {
-      patterns: ['disease detect', 'plant disease', 'bimari'],
-      action: () => { speak('Opening disease detection'); navigate('/disease/'); }
-    },
-    {
-      patterns: ['crop recommendation', 'crop ai', 'recommend crop', 'fasal batao'],
-      action: () => { speak('Opening Crop AI recommendation'); navigate('/crop/'); }
-    },
-    {
-      patterns: ['help', 'commands', 'kya bol sakta hun'],
-      action: showHelp
-    },
+    mr: {
+      title: 'बोलून पान उघडा', start: 'मायक्रोफोन वापरा', stop: 'ऐकणे थांबवा',
+      note: 'ऐच्छिक: मायक्रोफोन दाबा आणि सूचना बोला. तुमचा ब्राउझर आवाज त्याच्या ओळख सेवेकडे पाठवू शकतो. पानावरील दुवेही वापरता येतात.',
+      unsupported: 'या ब्राउझरमध्ये आवाज ओळख उपलब्ध नाही. पुढे जाण्यासाठी पानावरील दुवे वापरा.',
+      ready: 'मायक्रोफोन बंद आहे.', listening: 'एक सूचना ऐकत आहोत…', stopped: 'मायक्रोफोन बंद केला.',
+      help: 'बोलण्याची उदाहरणे', examples: 'बोला: “बाजार उघडा”, “माझ्या ऑर्डर”, “शेतीचे नियोजन”, “हवामान दाखवा”, “मुख्य पान”, किंवा “टोमॅटो शोधा”.',
+      unknown: 'सूचना समजली नाही. बोलण्याची उदाहरणे पाहा किंवा पानावरील दुवा वापरा.',
+      denied: 'मायक्रोफोनची परवानगी मिळाली नाही. पानावरील दुवे वापरा किंवा ब्राउझरच्या सेटिंगमध्ये परवानगी देऊन पुन्हा प्रयत्न करा.',
+      noAudio: 'मायक्रोफोन सापडला नाही. पानावरील दुवे वापरा.',
+      noSpeech: 'आवाज ऐकू आला नाही. पुन्हा प्रयत्न करण्यासाठी मायक्रोफोन दाबा.',
+      network: 'ब्राउझरच्या आवाज सेवेशी संपर्क झाला नाही. इंटरनेट तपासा किंवा पानावरील दुवा वापरा.',
+      failed: 'आवाज ओळख सुरू झाली नाही. पुन्हा प्रयत्न करा किंवा पानावरील दुवा वापरा.',
+      unavailable: 'हे साधन शेतकरी खात्यांसाठी आहे. आपल्या आढावा पानावरून पुढे जा.',
+      opening: 'उघडत आहोत:', search: 'बाजारातील शोध',
+      market: 'बाजार', cart: 'तुमची टोपली', guides: 'पीक मार्गदर्शिका', assistant: 'शेती सहाय्यक',
+      weather: 'हवामान', analytics: 'तुमच्या शेतीची माहिती', crop: 'पिकांचे पर्याय', health: 'पिकांचे आरोग्य',
+      home: 'मुख्य पान', orders: 'तुमच्या ऑर्डर', planner: 'शेतीचे नियोजन'
+    }
+  };
+  const locales = {en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN'};
+  const commands = [
+    ['market', '/marketplace/', ['open marketplace', 'marketplace', 'open market', 'market', 'बाज़ार खोलें', 'बाजार खोलें', 'बाजार खोलो', 'बाज़ार', 'बाजार', 'मंडी', 'बाजार उघडा', 'शेतमाल बाजार']],
+    ['cart', '/cart/', ['open cart', 'my cart', 'cart', 'shopping cart', 'मेरी टोकरी', 'टोकरी खोलें', 'टोकरी', 'माझी टोपली', 'टोपली उघडा', 'टोपली']],
+    ['orders', null, ['my orders', 'orders', 'order status', 'मेरे ऑर्डर', 'ऑर्डर दिखाओ', 'ऑर्डर', 'माझ्या ऑर्डर', 'ऑर्डर दाखवा']],
+    ['planner', '/farm-tools', ['farm planner', 'open farm planner', 'planner', 'tasks', 'खेती की योजना', 'खेत की योजना', 'शेतीचे नियोजन', 'कामाची यादी', 'शेतीची वही']],
+    ['guides', '/roadmap/', ['open roadmap', 'roadmap', 'crop guides', 'farming guide', 'फसल मार्गदर्शिका', 'खेती की जानकारी', 'पीक मार्गदर्शिका', 'शेती मार्गदर्शक']],
+    ['assistant', '/chatbot/', ['open chatbot', 'chatbot', 'farming assistant', 'assistant', 'खेती सहायक', 'मददगार', 'शेती सहाय्यक']],
+    ['weather', '/weather/', ['weather', 'open weather', 'मौसम', 'मौसम दिखाओ', 'मौसम दिखाएं', 'हवामान', 'हवामान दाखवा']],
+    ['analytics', '/analytics/', ['analytics', 'farm insights', 'खेती की जानकारी दिखाओ', 'शेतीची माहिती']],
+    ['crop', '/crop/', ['crop options', 'crop recommendation', 'crop ai', 'फसल के विकल्प', 'पिकांचे पर्याय']],
+    ['health', '/disease/', ['plant health', 'plant disease', 'disease detection', 'पौधों का स्वास्थ्य', 'फसल के रोग', 'पिकांचे आरोग्य', 'पीक रोग']],
+    ['home', '/', ['go home', 'home', 'homepage', 'मुख्य पृष्ठ', 'घर', 'मुख्य पान', 'मुख्य पान उघडा']]
   ];
-
-  // -------------------------------------------------------------------------
-  // Navigate Helper
-  // -------------------------------------------------------------------------
-  function navigate(path) {
-    setTimeout(() => { window.location.href = path; }, 600);
-  }
-
-  // -------------------------------------------------------------------------
-  // Search Handler
-  // -------------------------------------------------------------------------
-  function handleSearch(transcript) {
-    const searchMatch = transcript.match(/^search\s+(.+)$/i)
-      || transcript.match(/^dhundo\s+(.+)$/i)
-      || transcript.match(/^search for\s+(.+)$/i)
-      || transcript.match(/^find\s+(.+)$/i);
-
-    if (searchMatch) {
-      const query = searchMatch[1].trim();
-      speak(`Searching for ${query}`);
-      setTimeout(() => {
-        window.location.href = `/marketplace/?search=${encodeURIComponent(query)}`;
-      }, 600);
-      return true;
-    }
-    return false;
-  }
-
-  // -------------------------------------------------------------------------
-  // Show Help
-  // -------------------------------------------------------------------------
-  function showHelp() {
-    const helpText = [
-      'Available commands:',
-      'Open Marketplace, Open Cart, Open Roadmap,',
-      'Open Chatbot, My Orders, Go Home,',
-      'Weather, Analytics, Crop AI,',
-      'Search followed by product name,',
-      'and Help for this list.'
-    ].join(' ');
-    speak(helpText);
-    showToast('🎤 Commands: "open marketplace", "open cart", "search tomato", "my orders", "help"...', 6000);
-  }
-
-  // -------------------------------------------------------------------------
-  // Process Transcript
-  // -------------------------------------------------------------------------
-  function processTranscript(transcript) {
-    transcript = transcript.toLowerCase().trim();
-    console.log('[Voice]', transcript);
-
-    updateStatus('Processing: "' + transcript + '"');
-
-    // Try search command first
-    if (handleSearch(transcript)) return;
-
-    // Match against known commands
-    for (const cmd of COMMANDS) {
-      if (cmd.patterns.some(p => transcript.includes(p))) {
-        cmd.action();
-        return;
-      }
-    }
-
-    // No match
-    speak('Sorry, I did not understand. Say "help" to hear available commands.');
-    showToast('❓ Command not recognized. Say "help" for a list.', 3000);
-    updateStatus('Not recognized');
-  }
-
-  // -------------------------------------------------------------------------
-  // Toast Notification
-  // -------------------------------------------------------------------------
-  function showToast(message, duration = 3000) {
-    const existing = document.getElementById('va-toast');
-    if (existing) existing.remove();
-
-    const toast = document.createElement('div');
-    toast.id = 'va-toast';
-    toast.innerHTML = message;
-    Object.assign(toast.style, {
-      position: 'fixed',
-      bottom: '100px',
-      right: '24px',
-      background: 'rgba(30,40,30,0.95)',
-      color: '#fff',
-      padding: '12px 20px',
-      borderRadius: '12px',
-      fontSize: '14px',
-      zIndex: '9999',
-      maxWidth: '320px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-      border: '1px solid rgba(46,213,115,0.3)',
-      backdropFilter: 'blur(10px)',
-      transition: 'opacity 0.3s ease',
-      opacity: '0'
-    });
-    document.body.appendChild(toast);
-    setTimeout(() => toast.style.opacity = '1', 50);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 300);
-    }, duration);
-  }
-
-  // -------------------------------------------------------------------------
-  // Update Mic Button Status
-  // -------------------------------------------------------------------------
-  function updateStatus(msg) {
-    const label = document.getElementById('va-label');
-    if (label) label.textContent = msg;
-  }
-
-  // -------------------------------------------------------------------------
-  // Recognition Events
-  // -------------------------------------------------------------------------
-  recognition.onstart = () => {
-    isListening = true;
-    updateStatus('Listening...');
-    setMicActive(true);
-    showToast('🎤 Listening... Speak your command', 5000);
+  let recognition = null;
+  let elements = null;
+  let statusKey = 'ready';
+  const language = () => {
+    const selected = typeof I18n !== 'undefined' ? I18n.getLang() : document.documentElement.lang;
+    return copy[selected] ? selected : 'en';
   };
+  const text = key => copy[language()][key] || copy.en[key] || '';
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    processTranscript(transcript);
-  };
+  function render() {
+    if (!elements) return;
+    elements.title.textContent = text('title');
+    elements.note.textContent = text('note');
+    elements.button.textContent = '🎤 ' + text(recognition ? 'stop' : 'start');
+    elements.button.setAttribute('aria-pressed', String(Boolean(recognition)));
+    elements.summary.textContent = text('help');
+    elements.examples.textContent = text('examples');
+    elements.status.textContent = text(statusKey);
+  }
 
-  recognition.onerror = (event) => {
-    isListening = false;
-    setMicActive(false);
-    updateStatus('Tap to speak');
-    if (event.error === 'no-speech') {
-      showToast('🔇 No speech detected. Try again!', 2000);
-    } else if (event.error === 'not-allowed') {
-      showToast('🚫 Microphone access denied. Please allow mic in browser settings.', 4000);
-    } else {
-      showToast('⚠️ Voice error: ' + event.error, 3000);
-    }
-  };
+  function speak(message) {
+    if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== 'function') return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new window.SpeechSynthesisUtterance(message);
+      utterance.lang = locales[language()];
+      window.speechSynthesis.speak(utterance);
+    } catch (_) { /* Optional speech feedback must never block navigation. */ }
+  }
 
-  recognition.onend = () => {
-    isListening = false;
-    setMicActive(false);
-    setTimeout(() => updateStatus('Tap to speak'), 1500);
-  };
-
-  // -------------------------------------------------------------------------
-  // Mic Button Active State
-  // -------------------------------------------------------------------------
-  function setMicActive(active) {
-    const btn = document.getElementById('va-mic-btn');
-    if (!btn) return;
-    if (active) {
-      btn.classList.add('va-listening');
-    } else {
-      btn.classList.remove('va-listening');
+  function stop() {
+    const previous = recognition;
+    recognition = null;
+    if (previous) {
+      try { previous.abort(); } catch (_) { /* It may already have ended. */ }
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Toggle Listening
-  // -------------------------------------------------------------------------
-  function toggleListening() {
-    if (isListening) {
-      recognition.stop();
-    } else {
-      try {
-        recognition.start();
-      } catch (e) {
-        showToast('⚠️ Could not start microphone: ' + e.message, 3000);
-      }
+  function process(transcript) {
+    if (typeof transcript !== 'string' || transcript.length > 300) {
+      statusKey = 'unknown'; render(); return;
+    }
+    const command = transcript.normalize('NFC').trim().toLowerCase().replace(/[.!?।]+$/u, '').replace(/\s+/g, ' ');
+    if (['help', 'commands', 'मदद', 'सहायता', 'मदत', 'उदाहरणे'].includes(command)) {
+      elements.help.open = true;
+      statusKey = 'examples'; render(); speak(text('examples')); return;
+    }
+    const search = command.match(/^(?:search(?: for)?|find|खोजें|खोजो|ढूंढो|ढूँढो|खोज|शोधा|शोध)\s+(.+)$/u)
+      || command.match(/^(.+?)\s+(?:खोजें|खोजो|ढूंढो|ढूँढो|शोधा|शोध)$/u);
+    if (search && search[1].trim()) {
+      const message = text('opening') + ' ' + text('search');
+      elements.status.textContent = message;
+      speak(message);
+      window.location.assign('/marketplace/?search=' + encodeURIComponent(search[1].trim().slice(0, 100)));
+      return;
+    }
+    const match = commands.find(([, , phrases]) => phrases.includes(command));
+    if (!match) { statusKey = 'unknown'; render(); return; }
+    const [label, configuredPath] = match;
+    if (label === 'planner' && !document.querySelector('a[href="/auth/farmer/dashboard"]') &&
+        !document.querySelector('a[href="/auth/login"]')) {
+      statusKey = 'unavailable'; render(); return;
+    }
+    const path = label === 'orders'
+      ? (document.querySelector('a[href="/orders/farmer"]') ? '/orders/farmer' : '/orders/my')
+      : configuredPath;
+    const message = text('opening') + ' ' + text(label);
+    elements.status.textContent = message;
+    speak(message);
+    window.location.assign(path);
+  }
+
+  function toggle() {
+    if (recognition) {
+      stop(); statusKey = 'stopped'; render(); return;
+    }
+    if (!SpeechRecognition) return;
+    let current;
+    try {
+      current = new SpeechRecognition();
+      current.lang = locales[language()];
+      current.continuous = false;
+      current.interimResults = false;
+      current.maxAlternatives = 1;
+      recognition = current;
+      statusKey = 'listening'; render();
+      current.onstart = () => { if (recognition === current) { statusKey = 'listening'; render(); } };
+      current.onresult = event => {
+        if (recognition !== current) return;
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        recognition = null;
+        try { current.stop(); } catch (_) {}
+        render();
+        process(transcript);
+      };
+      current.onerror = event => {
+        if (recognition !== current) return;
+        recognition = null;
+        statusKey = ({'not-allowed': 'denied', 'service-not-allowed': 'denied',
+          'audio-capture': 'noAudio', 'no-speech': 'noSpeech', 'network': 'network',
+          'aborted': 'stopped'})[event.error] || 'failed';
+        render();
+      };
+      current.onend = () => {
+        if (recognition !== current) return;
+        recognition = null;
+        if (statusKey === 'listening') statusKey = 'noSpeech';
+        render();
+      };
+      current.start();
+    } catch (_) {
+      if (recognition === current) recognition = null;
+      statusKey = 'failed'; render();
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Create Floating Button UI
-  // -------------------------------------------------------------------------
   function createUI() {
-    const style = document.createElement('style');
-    style.textContent = `
-      #va-container {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        z-index: 9998;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        font-family: 'Segoe UI', sans-serif;
-      }
-      #va-label {
-        background: rgba(20,30,20,0.9);
-        color: #a8e6a3;
-        font-size: 11px;
-        padding: 4px 10px;
-        border-radius: 20px;
-        border: 1px solid rgba(46,213,115,0.3);
-        white-space: nowrap;
-        backdrop-filter: blur(8px);
-        transition: opacity 0.3s;
-      }
-      #va-mic-btn {
-        width: 58px;
-        height: 58px;
-        border-radius: 50%;
-        border: none;
-        cursor: pointer;
-        background: linear-gradient(135deg, #2ed573, #1e8449);
-        color: white;
-        font-size: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 20px rgba(46,213,115,0.4);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        position: relative;
-      }
-      #va-mic-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 6px 28px rgba(46,213,115,0.6);
-      }
-      #va-mic-btn.va-listening {
-        background: linear-gradient(135deg, #ff4757, #c0392b);
-        box-shadow: 0 0 0 0 rgba(255,71,87,0.6);
-        animation: va-pulse 1.2s infinite;
-      }
-      @keyframes va-pulse {
-        0%   { box-shadow: 0 0 0 0 rgba(255,71,87,0.6); }
-        70%  { box-shadow: 0 0 0 18px rgba(255,71,87,0); }
-        100% { box-shadow: 0 0 0 0 rgba(255,71,87,0); }
-      }
-    `;
-    document.head.appendChild(style);
-
-    const container = document.createElement('div');
-    container.id = 'va-container';
-
-    const label = document.createElement('div');
-    label.id = 'va-label';
-    label.textContent = 'Tap to speak';
-
-    const btn = document.createElement('button');
-    btn.id = 'va-mic-btn';
-    btn.setAttribute('aria-label', 'Voice Assistant — tap to speak');
-    btn.setAttribute('title', 'Voice Assistant');
-    btn.innerHTML = '🎤';
-    btn.addEventListener('click', toggleListening);
-
-    container.appendChild(label);
-    container.appendChild(btn);
-    document.body.appendChild(container);
+    const footer = document.querySelector('.site-footer .container');
+    if (!footer || document.getElementById('voice-navigation')) return;
+    const section = document.createElement('section');
+    section.id = 'voice-navigation';
+    section.className = 'border-top mt-3 pt-3';
+    section.setAttribute('aria-labelledby', 'voice-navigation-title');
+    const title = document.createElement('h2');
+    title.id = 'voice-navigation-title'; title.className = 'h6';
+    const note = document.createElement('p'); note.className = 'small text-muted mb-2';
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'btn btn-outline-success btn-sm';
+    button.id = 'voice-navigation-button';
+    button.setAttribute('aria-describedby', 'voice-navigation-status');
+    button.addEventListener('click', toggle);
+    button.disabled = !SpeechRecognition;
+    const status = document.createElement('p');
+    status.id = 'voice-navigation-status'; status.className = 'small text-muted mt-2 mb-0';
+    status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+    const help = document.createElement('details'); help.className = 'small mt-2';
+    const summary = document.createElement('summary');
+    summary.style.minHeight = '44px'; summary.style.display = 'flex'; summary.style.alignItems = 'center';
+    const examples = document.createElement('p'); examples.className = 'text-muted mb-0';
+    help.append(summary, examples);
+    section.append(title, note, button, status, help);
+    footer.appendChild(section);
+    elements = {title, note, button, status, help, summary, examples};
+    statusKey = SpeechRecognition ? 'ready' : 'unsupported';
+    render();
+    if (typeof I18n !== 'undefined') I18n.onLangChange(() => {
+      stop(); statusKey = SpeechRecognition ? 'ready' : 'unsupported'; render();
+      if (window.speechSynthesis) { try { window.speechSynthesis.cancel(); } catch (_) {} }
+    });
+    window.addEventListener('pagehide', stop);
   }
-
-  // -------------------------------------------------------------------------
-  // Init on DOM ready
-  // -------------------------------------------------------------------------
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createUI);
-  } else {
-    createUI();
-  }
-
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', createUI);
+  else createUI();
 })();

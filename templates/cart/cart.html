@@ -1,469 +1,124 @@
 {% extends "base.html" %}
-{% block title %}My Cart — धरती रक्षक{% endblock %}
-
+{% block title %}My Cart — Dharti Rakshak{% endblock %}
 {% block head_extra %}
-<!-- Razorpay Checkout SDK -->
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% if razorpay_key %}<script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>{% endif %}
 <style>
-  /* ===== Page Shell ===== */
-  .cart-page { background: #f8faf9; min-height: 80vh; }
-  .cart-header {
-    background: linear-gradient(135deg, #1a3a2a, #2d6a4f);
-    color: white; padding: 40px 0 32px; text-align: center;
-  }
-  .cart-header h1 { font-size: 2rem; font-weight: 800; }
-
-  /* ===== Cart Item Card ===== */
-  .cart-item-card {
-    background: white; border-radius: 16px;
-    box-shadow: 0 2px 14px rgba(0,0,0,0.06);
-    padding: 20px 24px;
-    border: 1px solid #f0f0f0;
-    display: flex; align-items: center; gap: 20px;
-    transition: box-shadow 0.2s;
-  }
-  .cart-item-card:hover { box-shadow: 0 6px 24px rgba(45,106,79,0.12); }
-  .cart-item-img {
-    width: 80px; height: 80px; border-radius: 12px;
-    object-fit: cover; flex-shrink: 0;
-    background: #e8f5e9;
-    display: flex; align-items: center; justify-content: center; font-size: 36px;
-  }
-  .cart-item-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
-
-  /* ===== Qty Control ===== */
-  .qty-control {
-    display: flex; align-items: center; gap: 0;
-    border: 1.5px solid #dee2e6; border-radius: 10px; overflow: hidden;
-  }
-  .qty-control button {
-    width: 34px; height: 34px; border: none; background: #f8f9fa;
-    font-size: 16px; cursor: pointer; font-weight: 700; color: #2d6a4f;
-    transition: background 0.15s;
-  }
-  .qty-control button:hover { background: #2d6a4f; color: white; }
-  .qty-control span {
-    min-width: 40px; text-align: center; font-weight: 600; font-size: 14px;
-  }
-  .subtotal { font-size: 1.1rem; font-weight: 700; color: #1a3a2a; }
-
-  /* ===== Checkout Card ===== */
-  .checkout-card {
-    background: white; border-radius: 20px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-    padding: 28px; border: 1px solid #f0f0f0;
-    position: sticky; top: 100px;
-  }
-  .checkout-card h4 { color: #1a3a2a; font-weight: 800; margin-bottom: 20px; }
-
-  /* ===== Payment Options ===== */
-  .payment-option {
-    border: 2px solid #dee2e6; border-radius: 12px;
-    padding: 14px 18px; cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; gap: 12px;
-  }
-  .payment-option:hover { border-color: #2d6a4f; }
-
-  /* ===== Order Total ===== */
-  .order-total {
-    background: linear-gradient(135deg, #f0faf3, #e8f5e9);
-    border-radius: 12px; padding: 16px; margin-bottom: 20px;
-  }
-
-  /* ===== Buttons ===== */
-  .btn-checkout {
-    background: linear-gradient(135deg, #2ed573, #1e8449);
-    color: white; border: none; border-radius: 14px;
-    padding: 14px; font-size: 16px; font-weight: 700;
-    width: 100%; transition: transform 0.15s, box-shadow 0.15s;
-  }
-  .btn-checkout:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(46,213,115,0.4); color: white;
-  }
-
-  /* ===== Razorpay Button ===== */
-  .btn-razorpay {
-    background: linear-gradient(135deg, #072654, #1a4ab5);
-    color: white; border: none; border-radius: 14px;
-    padding: 14px; font-size: 16px; font-weight: 700;
-    width: 100%; transition: transform 0.15s, box-shadow 0.15s;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-  }
-  .btn-razorpay:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(7,38,84,0.35); color: white;
-  }
-  .btn-razorpay .rzp-logo {
-    background: white; border-radius: 6px;
-    padding: 2px 6px; font-size: 13px; font-weight: 900;
-    color: #072654; letter-spacing: -0.5px;
-  }
-
-  /* ===== Payment section toggle ===== */
-  #razorpay-section { display: none; }
-  #razorpay-section.show { display: block; }
-  #cod-section { display: block; }
-  #cod-section.hide { display: none; }
-
-  /* ===== Razorpay Badge ===== */
-  .rzp-badge {
-    background: linear-gradient(135deg,#f8f9ff,#eef1ff);
-    border: 1px solid #c9d2f6; border-radius: 10px;
-    padding: 10px 14px; margin-bottom: 14px;
-    font-size: 12px; color: #4a5568;
-  }
-  .rzp-badge strong { color: #072654; }
-
-  /* ===== Secure badge ===== */
-  .secure-badge {
-    text-align: center; font-size: 11px; color: #6c757d;
-    margin-top: 12px; display: flex; align-items: center; gap: 6px; justify-content: center;
-  }
-
-  /* ===== Empty Cart ===== */
-  .empty-cart { text-align: center; padding: 80px 0; }
-  .empty-cart .icon { font-size: 80px; }
+.cart-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:1.5rem}.cart-line{display:grid;grid-template-columns:64px minmax(0,1fr);gap:1rem;padding:1.25rem}.cart-photo{width:64px;height:64px;object-fit:cover;border-radius:12px;background:#edf4ec}.cart-actions{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}.cart-actions input{width:5.5rem;min-height:44px}.cart-actions .btn{min-height:44px}.checkout-panel{padding:1.5rem;align-self:start}.cart-summary-row{display:flex;justify-content:space-between;gap:1rem;margin-bottom:.75rem}.cart-summary-row span:first-child{overflow-wrap:anywhere}.cart-empty{text-align:center;padding:4rem 1rem}.cart-note{color:var(--text-muted,#526657);font-size:.9rem}@media(max-width:767px){.cart-layout{grid-template-columns:1fr}.cart-line{padding:1rem}.checkout-panel{padding:1rem}}
 </style>
 {% endblock %}
-
 {% block content %}
-<div class="cart-header">
-  <h1 data-i18n="cart_heading">🛒 My Cart</h1>
-  <p style="color:rgba(255,255,255,0.75);">{{ items|length }} item(s) in your cart</p>
-</div>
-
-<div class="cart-page py-4">
-  <div class="container">
-    {% if items %}
-    <div class="row g-4">
-
-      <!-- ============ Cart Items ============ -->
-      <div class="col-lg-7">
-        <h5 class="fw-bold mb-3" style="color:#1a3a2a;">Cart Items</h5>
-        <div class="d-flex flex-column gap-3">
-          {% for item in items %}
-          <div class="cart-item-card">
-            <!-- Image -->
-            <div class="cart-item-img">
-              {% if item.product.image_filename %}
-              <img src="{{ url_for('static', filename='uploads/' + item.product.image_filename) }}"
-                   alt="{{ item.product.name }}" />
-              {% else %}
-              🌿
-              {% endif %}
-            </div>
-
-            <!-- Info -->
-            <div class="flex-grow-1">
-              <h6 class="mb-1 fw-bold" style="color:#1a3a2a;">{{ item.product.name }}</h6>
-              <p class="mb-1 text-muted" style="font-size:13px;">
-                by {{ item.product.farmer.name }} &nbsp;|&nbsp; ₹{{ item.product.price }} / unit
-              </p>
-              <div class="d-flex align-items-center gap-3 mt-2">
-                <!-- Quantity form -->
-                <form method="POST" action="{{ url_for('cart.update_quantity', item_id=item.id) }}"
-                      style="display:inline;">
-                  <div class="qty-control">
-                    <button type="submit" name="quantity" value="{{ item.quantity - 1 }}"
-                            onclick="return {{ 'true' if item.quantity > 1 else 'false' }}">−</button>
-                    <span>{{ item.quantity }}</span>
-                    <button type="submit" name="quantity" value="{{ item.quantity + 1 }}">+</button>
-                  </div>
-                </form>
-                <span class="subtotal">₹{{ "%.2f"|format(item.subtotal()) }}</span>
-              </div>
-            </div>
-
-            <!-- Remove -->
+<div class="container py-4">
+  <header class="page-header mb-4">
+    <p class="eyebrow" data-i18n="commerce_direct">Direct from local farmers</p>
+    <h1 data-i18n="cart_heading">My Cart</h1>
+    <p class="cart-note" data-i18n="commerce_cart_note">Review the quantity and unit before ordering. Stock is confirmed when you place your order.</p>
+  </header>
+  {% if items %}
+  <div class="cart-layout">
+    <section aria-label="Cart items">
+      {% for item in items %}
+      <article class="card cart-line mb-3">
+        {% if item.product.image_filename %}
+        <img class="cart-photo" src="{{ url_for('static', filename='uploads/' + item.product.image_filename) }}" alt="{{ item.product.name }}">
+        {% else %}<div class="cart-photo d-flex align-items-center justify-content-center" aria-hidden="true">🌿</div>{% endif %}
+        <div>
+          <h2 class="h5 mb-1">{{ item.product.name }}</h2>
+          <p class="cart-note mb-2">{{ item.product.farmer.name }} · ₹{{ '%.2f'|format(item.product.price) }} / {{ item.product.stock_unit }}</p>
+          <p class="cart-note"><span data-i18n="commerce_available">Available</span>: {{ item.product.quantity }}</p>
+          <div class="cart-actions">
+            <form method="POST" action="{{ url_for('cart.update_quantity', item_id=item.id) }}" class="d-flex align-items-end gap-2 flex-wrap">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div><label for="quantity-{{ item.id }}" class="form-label small" data-i18n="commerce_quantity">Quantity</label><input id="quantity-{{ item.id }}" class="form-control" type="number" name="quantity" min="1" max="{{ item.product.purchase_limit or 500 }}" step="1" value="{{ item.quantity }}" required></div>
+              <button class="btn btn-outline-success" type="submit" data-i18n="commerce_update">Update</button>
+            </form>
             <form method="POST" action="{{ url_for('cart.remove_from_cart', item_id=item.id) }}">
-              <button type="submit" class="btn btn-sm"
-                      style="border-radius:10px;background:#fff0f0;color:#c0392b;border:1px solid #f5c6cb;"
-                      onclick="return confirm('Remove this item?')">
-                <i class="bi bi-trash"></i>
-              </button>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-danger" type="submit" data-i18n="commerce_remove">Remove</button>
             </form>
           </div>
-          {% endfor %}
+          <p class="fw-bold mt-3 mb-0">₹{{ '%.2f'|format(item.subtotal()) }}</p>
         </div>
-
-        <div class="mt-3">
-          <a href="{{ url_for('marketplace.listing') }}" class="btn btn-outline-secondary"
-             style="border-radius:10px;">
-            ← Continue Shopping
-          </a>
-        </div>
-      </div>
-
-      <!-- ============ Checkout Sidebar ============ -->
-      <div class="col-lg-5">
-        <div class="checkout-card">
-          <h4>📦 Checkout</h4>
-
-          <!-- Order Summary -->
-          <div class="order-total">
-            {% for item in items %}
-            <div class="d-flex justify-content-between mb-1" style="font-size:14px;">
-              <span>{{ item.product.name }} × {{ item.quantity }}</span>
-              <span>₹{{ "%.2f"|format(item.subtotal()) }}</span>
-            </div>
-            {% endfor %}
-            <hr />
-            <div class="fw-bold d-flex justify-content-between"><span data-i18n="cart_total">Total</span><span style="color:#1e8449;font-size:1.2rem;">&#x20b9;{{ "%.2f"|format(total) }}</span></div>
-          </div>
-
-          <!-- Delivery Address (shared) -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold">
-              📍 Delivery Address <span class="text-danger">*</span>
-            </label>
-            <textarea class="form-control" id="delivery-address" rows="3"
-                      placeholder="Enter your full delivery address (House No., Street, City, Pincode)"
-                      required maxlength="400" style="border-radius:10px;"></textarea>
-          </div>
-
-          <!-- Payment Method Toggle -->
-          <div class="mb-3">
-            <label class="form-label fw-semibold">💳 Payment Method</label>
-            <div class="d-flex flex-column gap-2">
-
-              <!-- COD -->
-              <label style="cursor:pointer;" onclick="selectPayment('cod')">
-                <div class="payment-option" id="opt-cod"
-                     style="border-color:#2d6a4f; background:#f0faf3;">
-                  <input type="radio" name="pay_mode" value="cod" id="radio-cod" checked
-                         style="accent-color:#2d6a4f;">
-                  <div>
-                    <div class="fw-semibold">💵 Cash on Delivery (COD)</div>
-                    <div style="font-size:12px;color:#6c757d;">Pay when your order arrives</div>
-                  </div>
-                </div>
-              </label>
-
-              <!-- Razorpay UPI / Card -->
-              <label style="cursor:pointer;" onclick="selectPayment('razorpay')">
-                <div class="payment-option" id="opt-razorpay">
-                  <input type="radio" name="pay_mode" value="razorpay" id="radio-razorpay"
-                         style="accent-color:#072654;">
-                  <div>
-                    <div class="fw-semibold">📱 UPI / Card — Razorpay</div>
-                    <div style="font-size:12px;color:#6c757d;">
-                      Pay securely with UPI, Debit/Credit card, Netbanking
-                    </div>
-                  </div>
-                </div>
-              </label>
-
-            </div>
-          </div>
-
-          <!-- === COD Section === -->
-          <div id="cod-section">
-            <form method="POST" action="{{ url_for('cart.checkout') }}" id="cod-form">
-              <input type="hidden" name="delivery_location" id="cod-delivery">
-              <button type="submit" id="btn-cod" class="btn-checkout"
-                      onclick="return injectDelivery('cod')">
-                ✅ Place Order (COD) — ₹{{ "%.2f"|format(total) }}
-              </button>
-            </form>
-          </div>
-
-          <!-- === Razorpay Section === -->
-          <div id="razorpay-section">
-            <div class="rzp-badge">
-              🔒 <strong>Secured by Razorpay</strong> — Your payment info is encrypted &amp;
-              never stored on our servers.
-              <br><span id="rzp-mode-label" style="color:#888;font-size:11px;">Checking payment gateway status...</span>
-            </div>
-
-            <!-- Test Mode Instructions Alert Box -->
-            <div id="test-mode-instructions" class="alert alert-warning border border-warning" style="display:none; border-radius:12px; font-size:13px; margin-bottom:14px; background:#fffbf0; color:#856404; padding:12px;">
-              💡 <strong>How to Complete Test Payment:</strong><br>
-              Scanning the UPI QR code on your phone <strong>will not work</strong> in Test Mode.<br>
-              To complete the checkout successfully, please:
-              <ul class="mb-0 mt-1 pl-3">
-                <li>Choose <strong>Cards</strong> and enter test card number: <code>4111 1111 1111 1111</code> (any expiry/CVV).</li>
-                <li>Or choose <strong>UPI</strong> (enter UPI ID) and use: <code>success@razorpay</code>.</li>
-                <li>Click Pay and select the green <strong>"Success"</strong> button to simulate the payment!</li>
-              </ul>
-            </div>
-
-            <button class="btn-razorpay" id="btn-rzp" onclick="startRazorpay()">
-              <span class="rzp-logo">rzp</span>
-              Pay ₹{{ "%.2f"|format(total) }} with Razorpay
-            </button>
-
-            <!-- Hidden verify form (auto-submitted after payment success) -->
-            <form method="POST" action="{{ url_for('cart.verify_payment') }}"
-                  id="rzp-verify-form" style="display:none;">
-              <input type="hidden" name="razorpay_order_id"   id="rzp_order_id">
-              <input type="hidden" name="razorpay_payment_id" id="rzp_payment_id">
-              <input type="hidden" name="razorpay_signature"  id="rzp_signature">
-              <input type="hidden" name="delivery_location"   id="rzp-delivery">
-            </form>
-          </div>
-
-          <div class="secure-badge">
-            🔐 256-bit SSL Encrypted &nbsp;|&nbsp; Powered by Razorpay
-          </div>
-
-        </div>
-      </div>
-
-    </div>
-
-    {% else %}
-    <!-- Empty cart -->
-    <div class="empty-cart">
-      <div class="icon">🛒</div>
-      <h3 class="fw-bold mt-3" style="color:#1a3a2a;">Your cart is empty</h3>
-      <p class="text-muted">Explore the marketplace and add organic products to your cart!</p>
-      <a href="{{ url_for('marketplace.listing') }}"
-         class="btn mt-3 fw-bold"
-         style="background:linear-gradient(135deg,#2ed573,#1e8449);color:white;border-radius:12px;padding:12px 32px;">
-        🛍️ Browse Marketplace
-      </a>
-    </div>
-    {% endif %}
+      </article>
+      {% endfor %}
+      <a class="btn btn-outline-success" href="{{ url_for('marketplace.listing') }}" data-i18n="commerce_continue">Continue shopping</a>
+    </section>
+    <section class="card checkout-panel" aria-labelledby="checkout-heading">
+      <h2 id="checkout-heading" class="h4" data-i18n="commerce_checkout">Checkout</h2>
+      {% for item in items %}<div class="cart-summary-row"><span>{{ item.product.name }} × {{ item.quantity }} {{ item.product.stock_unit }}</span><strong>₹{{ '%.2f'|format(item.subtotal()) }}</strong></div>{% endfor %}
+      <hr>
+      <div class="cart-summary-row h5"><span data-i18n="cart_total">Total</span><strong>₹{{ '%.2f'|format(total) }}</strong></div>
+      <p class="cart-note" data-i18n="commerce_whole_units">Orders use whole units of the listing (for example, 2 means 2 kg for a kg listing). Confirm delivery arrangements with the farmer.</p>
+      <form method="POST" action="{{ url_for('cart.checkout') }}" id="cod-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="checkout_token" value="{{ checkout_token }}">
+        <label for="delivery-address" class="form-label fw-semibold" data-i18n="commerce_address">Full delivery address</label>
+        <textarea class="form-control mb-3" id="delivery-address" name="delivery_location" rows="3" minlength="5" maxlength="500" autocomplete="street-address" required data-i18n-placeholder="commerce_address_placeholder" placeholder="House, village or street, city, district and PIN code"></textarea>
+        <button class="btn btn-success w-100" type="submit" data-i18n="commerce_cod">Place order · Cash on delivery</button>
+        <p class="cart-note mt-2" data-i18n="commerce_cod_note">Pay the farmer on delivery. Track acceptance in My Orders.</p>
+      </form>
+      {% if razorpay_key %}
+      <hr>
+      {% if razorpay_key.startswith('rzp_test_') %}<p class="alert alert-warning" data-i18n="commerce_test_mode">Test payment mode: this does not charge real money.</p>{% else %}<p class="cart-note" data-i18n="commerce_live_mode">Online payment charges your selected payment method through Razorpay.</p>{% endif %}
+      <button class="btn btn-outline-success w-100" id="online-pay" type="button" data-i18n="commerce_pay_online">Pay online with Razorpay</button>
+      <form method="POST" action="{{ url_for('cart.verify_payment') }}" id="verify-form" hidden>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="razorpay_order_id"><input type="hidden" name="razorpay_payment_id"><input type="hidden" name="razorpay_signature">
+      </form>
+      {% else %}<p class="alert alert-info mt-3 mb-0" data-i18n="commerce_gateway_offline">Online payments are not configured. Cash on delivery is available.</p>{% endif %}
+      <p id="payment-status" class="mt-3 mb-0" role="status" aria-live="polite"></p>
+    </section>
   </div>
+  {% else %}
+  <section class="card cart-empty">
+    <div aria-hidden="true" class="display-4 mb-3">🧺</div>
+    <h2 data-i18n="commerce_empty">Your cart is empty</h2>
+    <p data-i18n="commerce_empty_note">Find fresh produce and buy directly from local farmers.</p>
+    <div><a class="btn btn-success" href="{{ url_for('marketplace.listing') }}" data-i18n="buyer_orders_browse">Browse marketplace</a></div>
+  </section>
+  {% endif %}
 </div>
 {% endblock %}
-
 {% block scripts %}
+{% if items and razorpay_key %}
 <script>
-// ── Constants injected from Flask ──────────────────────────────────────────
-const RZP_KEY  = "{{ razorpay_key }}";
-const TOTAL_RS = {{ total }};          // e.g. 450.00
-
-// Update Razorpay mode label and instructions dynamically based on key type
-document.addEventListener("DOMContentLoaded", function() {
-  const isTestMode = !RZP_KEY.trim().startsWith("rzp_live");
-  const modeLabel = document.getElementById('rzp-mode-label');
-  const testInstructions = document.getElementById('test-mode-instructions');
-
-  if (modeLabel) {
-    if (isTestMode) {
-      modeLabel.innerHTML = "🔒 <strong>Using Test Mode</strong> — No real money will be charged.";
-      modeLabel.style.color = "#d35400";
-      if (testInstructions) testInstructions.style.display = 'block';
-    } else {
-      modeLabel.innerHTML = "🟢 <strong>Using Live Mode</strong> — Real transaction will be processed.";
-      modeLabel.style.color = "#27ae60";
-      if (testInstructions) testInstructions.style.display = 'none';
+(() => {
+  const button = document.getElementById('online-pay');
+  const status = document.getElementById('payment-status');
+  const address = document.getElementById('delivery-address');
+  const message = key => typeof I18n !== 'undefined' ? I18n.t(key) : key;
+  button.addEventListener('click', async () => {
+    if (!address.reportValidity()) return;
+    if (typeof Razorpay === 'undefined') { status.textContent = message('commerce_gateway_failed'); return; }
+    button.disabled = true;
+    status.textContent = message('commerce_preparing');
+    try {
+      const response = await fetch({{ url_for('cart.create_razorpay_order')|tojson }}, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({delivery_location:address.value.trim()})
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || message('commerce_gateway_failed'));
+      const checkout = new Razorpay({
+        key:data.key, amount:data.amount, currency:data.currency, order_id:data.razorpay_order_id,
+        name:'Dharti Rakshak', description:'Farm produce',
+        prefill:{name:data.name,email:data.email}, theme:{color:'#185b38'},
+        handler: payment => {
+          status.textContent = message('commerce_confirming');
+          const form = document.getElementById('verify-form');
+          ['razorpay_order_id','razorpay_payment_id','razorpay_signature'].forEach(key => { form.elements[key].value = payment[key]; });
+          form.submit();
+        },
+        modal:{ondismiss:() => { button.disabled=false; status.textContent=message('commerce_payment_closed'); }}
+      });
+      checkout.on('payment.failed', () => { button.disabled=false; status.textContent=message('commerce_payment_failed'); });
+      status.textContent='';
+      checkout.open();
+    } catch (error) {
+      status.textContent=error.message || message('commerce_gateway_failed');
+      button.disabled=false;
     }
-  }
-});
-
-// ── Payment mode toggle ────────────────────────────────────────────────────
-function selectPayment(mode) {
-  const codSection = document.getElementById('cod-section');
-  const rzpSection = document.getElementById('razorpay-section');
-  const optCod     = document.getElementById('opt-cod');
-  const optRzp     = document.getElementById('opt-razorpay');
-
-  if (mode === 'cod') {
-    document.getElementById('radio-cod').checked = true;
-    codSection.classList.remove('hide');
-    rzpSection.classList.remove('show');
-    optCod.style.borderColor = '#2d6a4f'; optCod.style.background = '#f0faf3';
-    optRzp.style.borderColor = '#dee2e6'; optRzp.style.background = '';
-  } else {
-    document.getElementById('radio-razorpay').checked = true;
-    codSection.classList.add('hide');
-    rzpSection.classList.add('show');
-    optRzp.style.borderColor = '#072654'; optRzp.style.background = '#f0f2ff';
-    optCod.style.borderColor = '#dee2e6'; optCod.style.background = '';
-  }
-}
-
-// ── Inject delivery address into COD hidden field ─────────────────────────
-function injectDelivery(mode) {
-  const addr = document.getElementById('delivery-address').value.trim();
-  if (!addr) {
-    alert('⚠️ Please enter your delivery address first.');
-    return false;
-  }
-  document.getElementById('cod-delivery').value = addr;
-  return true;
-}
-
-// ── Start Razorpay Flow ────────────────────────────────────────────────────
-async function startRazorpay() {
-  const addr = document.getElementById('delivery-address').value.trim();
-  if (!addr) {
-    alert('⚠️ Please enter your delivery address first.');
-    return;
-  }
-
-  const btn = document.getElementById('btn-rzp');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="rzp-logo">rzp</span> Creating order…';
-
-  try {
-    // Step 1 — Create Razorpay order on backend
-    const res = await fetch("{{ url_for('cart.create_razorpay_order') }}", {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ delivery_location: addr })
-    });
-    const data = await res.json();
-
-    if (!res.ok || data.error) {
-      alert('❌ ' + (data.error || 'Failed to create payment order. Please try again.'));
-      btn.disabled = false;
-      btn.innerHTML = '<span class="rzp-logo">rzp</span> Pay ₹{{ "%.2f"|format(total) }} with Razorpay';
-      return;
-    }
-
-    // Step 2 — Open Razorpay Checkout popup
-    const options = {
-      key:         data.key,
-      amount:      data.amount,
-      currency:    data.currency,
-      name:        'धरती रक्षक — Organic Marketplace',
-      description: 'Organic Farm Products',
-      image:       '/static/logo.png',
-      order_id:    data.razorpay_order_id,
-      prefill: {
-        name:  data.name,
-        email: data.email,
-      },
-      theme: { color: '#2d6a4f' },
-      callback_url: "{{ url_for('cart.verify_payment', _external=True) }}",
-      redirect: true,
-
-      // Step 3 — On successful payment (fallback callback)
-      handler: function(response) {
-        document.getElementById('rzp_order_id').value   = response.razorpay_order_id;
-        document.getElementById('rzp_payment_id').value = response.razorpay_payment_id;
-        document.getElementById('rzp_signature').value  = response.razorpay_signature;
-        document.getElementById('rzp-delivery').value   = addr;
-        document.getElementById('rzp-verify-form').submit();
-      },
-
-      modal: {
-        ondismiss: function() {
-          btn.disabled = false;
-          btn.innerHTML = '<span class="rzp-logo">rzp</span> Pay ₹{{ "%.2f"|format(total) }} with Razorpay';
-        }
-      }
-    };
-
-    const rzp = new Razorpay(options);
-
-    rzp.on('payment.failed', function(response) {
-      alert('❌ Payment failed: ' + response.error.description);
-      btn.disabled = false;
-      btn.innerHTML = '<span class="rzp-logo">rzp</span> Pay ₹{{ "%.2f"|format(total) }} with Razorpay';
-    });
-
-    rzp.open();
-
-  } catch (err) {
-    alert('❌ Network error. Please check your connection and try again.');
-    btn.disabled = false;
-    btn.innerHTML = '<span class="rzp-logo">rzp</span> Pay ₹{{ "%.2f"|format(total) }} with Razorpay';
-  }
-}
+  });
+})();
 </script>
+{% endif %}
 {% endblock %}

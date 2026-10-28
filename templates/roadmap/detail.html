@@ -80,11 +80,18 @@
   .tips-box ul { padding-left: 18px; margin-bottom: 0; }
   .tips-box ul li { font-size: 13px; color: #4a7c5c; margin-bottom: 3px; }
 
-  .stage-icons = ['🌱','🌿','🌱','💧','☀️','🌸','🍅','✂️','📦'];
+  @media (max-width: 575px) {
+    .timeline-item { padding-left: 55px; }
+    .timeline::before { left: 20px; }
+    .timeline-icon { left: 0; }
+    .timeline-card { padding: 16px; }
+    .roadmap-hero-detail h1 { font-size: 1.8rem; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
+<div class="container my-3"><div class="alert alert-info mb-0" data-i18n="guide_limits">These are general educational crop guides. Seasons, days and yields vary by variety, location and management. Confirm soil amendments and plant treatments with your local Krishi Vigyan Kendra; follow product labels and organic certification rules.</div></div>
 <!-- Hero -->
 <div class="roadmap-hero-detail">
   <div class="container">
@@ -220,3 +227,5 @@
   </div>
 </div>
 {% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/guides-i18n.js') }}"></script>{% endblock %}

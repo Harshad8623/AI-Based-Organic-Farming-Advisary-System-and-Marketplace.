@@ -7,9 +7,9 @@
   <!-- Farmer Info Card -->
   <div class="card mb-4 shadow-sm">
     <div class="card-body">
-      <div class="d-flex align-items-center gap-4">
+      <div class="d-flex align-items-center gap-4 flex-wrap">
         <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center"
-             style="width:70px;height:70px;font-size:2rem;">
+             style="flex-shrink:0;width:70px;height:70px;font-size:2rem;">
           🌾
         </div>
         <div>
@@ -48,7 +48,7 @@
           {% endif %}
           <div class="card-body">
             <h6 class="fw-bold">{{ p.name }}</h6>
-            <p class="text-success fw-bold">₹{{ p.price }} / unit</p>
+            <p class="text-success fw-bold">₹{{ "%.2f"|format(p.price) }} / {{ p.stock_unit }}</p>
             <p class="text-muted small">📦 {{ p.quantity }}</p>
             {% if p.description %}
               <p class="small text-muted">{{ p.description }}</p>
