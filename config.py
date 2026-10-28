@@ -2,6 +2,19 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+
+def normalize_database_url(database_url):
+    """Bind driverless PostgreSQL URLs to the driver shipped by this project.
+
+    SQLAlchemy 2.1 defaults to psycopg 3, while requirements.txt supplies
+    psycopg2-binary. Preserve credentials, query options and explicit drivers.
+    """
+    scheme, separator, remainder = database_url.partition('://')
+    if separator and scheme in ('postgres', 'postgresql'):
+        return 'postgresql+psycopg2://' + remainder
+    return database_url
+
+
 class Config:
     CSRF_ENABLED = True
     SESSION_COOKIE_HTTPONLY = True
@@ -27,11 +40,9 @@ class Config:
     # Render provides this automatically when you link a PostgreSQL service.
     # Locally: falls back to SQLite (no setup needed for development).
     #
-    # IMPORTANT: Render gives DATABASE_URL starting with "postgres://"
-    # but SQLAlchemy needs "postgresql://" — fixed automatically below.
-    _db_url = os.environ.get('DATABASE_URL', '')
-    if _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    # Render supplies a driverless postgres:// or postgresql:// URL. Select the
+    # installed psycopg2 driver explicitly, independent of SQLAlchemy defaults.
+    _db_url = normalize_database_url(os.environ.get('DATABASE_URL', ''))
 
     SQLALCHEMY_DATABASE_URI = _db_url or (
         'sqlite:///' + os.path.join(BASE_DIR, 'database', 'farming.db')

@@ -22,7 +22,7 @@ The exact selected versions above returned no non-withdrawn PyPI advisory record
 - Pillow 13.0.0 requires Python 3.11 or later. The selected environment uses Python 3.12.14; Python 3.10 is no longer the supported deployment pin.
 - Keep NumPy on the 1.x ABI for ONNX Runtime 1.17.1; `numpy==1.26.3` satisfies this. A NumPy 2 upgrade requires a separately verified ONNX Runtime upgrade.
 - scikit-learn 1.5.0 supports NumPy 1.26.3 and the resolved SciPy version. The crop model is rebuilt deterministically in memory, so there is no old pickle artifact to load across the version change.
-- Database drivers and existing table schemas do not need a migration for these dependency updates. New application tables are handled separately by the application's initialization.
+- PostgreSQL connection URLs must explicitly select the installed `psycopg2` driver because SQLAlchemy 2.1 changed its default to psycopg 3. `config.py` now normalizes driverless Render URLs accordingly; real PostgreSQL 16 startup and core writes were verified. Existing table schemas do not need a migration for these dependency updates. New application tables are handled separately by the application's initialization.
 - Razorpay 2.0.1 retains the SDK methods used by checkout. Mocked payment validation does not establish real merchant credentials, capture settings, refund automation or gateway availability.
 
 ## Resolved runtime inventory

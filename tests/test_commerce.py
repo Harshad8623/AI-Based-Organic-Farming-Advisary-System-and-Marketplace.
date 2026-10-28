@@ -11,7 +11,7 @@ import pytest
 from PIL import Image
 from werkzeug.security import generate_password_hash
 
-from commerce import parse_stock, price_paise, stock_text
+from commerce import parse_stock, price_paise, stock_text, MAX_TOTAL_PAISE
 from models import db, User, Product, CartItem, Order, Rating, CheckoutAttempt, OrderReceipt
 
 
@@ -262,6 +262,79 @@ def gateway(app, monkeypatch):
 
 def begin_payment(client):
     return client.post('/cart/create-razorpay-order', json={'delivery_location': 'Main Road, village 431001'})
+
+
+@pytest.mark.parametrize('method', ['cod', 'gateway'])
+def test_checkout_accepts_exact_existing_total_limit(app, client, people, gateway, method):
+    users, product_id = people
+    with app.app_context():
+        product = db.session.get(Product, product_id)
+        product.price = 20000
+        product.quantity = '500 kg'
+        db.session.commit()
+    login(client, users['buyer'])
+    add(client, product_id, '500')
+    if method == 'cod':
+        assert checkout(client).status_code == 302
+    else:
+        result = begin_payment(client)
+        assert result.status_code == 200
+        assert result.get_json()['amount'] == MAX_TOTAL_PAISE
+        assert gateway['requests'][0]['amount'] == MAX_TOTAL_PAISE
+    with app.app_context():
+        attempt = CheckoutAttempt.query.one()
+        assert attempt.amount_paise == MAX_TOTAL_PAISE
+        assert attempt.amount_paise <= 2147483647
+        if method == 'cod':
+            assert Order.query.one().total_price == 10000000
+            assert db.session.get(Product, product_id).quantity == '0 kg'
+            assert CartItem.query.count() == 0
+        else:
+            assert Order.query.count() == 0
+            assert db.session.get(Product, product_id).quantity == '500 kg'
+            assert CartItem.query.one().quantity == 500
+
+
+@pytest.mark.parametrize('method', ['cod', 'gateway'])
+@pytest.mark.parametrize('cart_shape', ['single_line', 'aggregate'])
+def test_oversized_checkout_never_creates_attempt_or_changes_stock(app, client, people, gateway, method, cart_shape):
+    users, product_id = people
+    with app.app_context():
+        product = db.session.get(Product, product_id)
+        product.price = 20000.01 if cart_shape == 'single_line' else 20000
+        product.quantity = '500 kg'
+        db.session.commit()
+    login(client, users['buyer'])
+    add(client, product_id, '500')
+    if cart_shape == 'aggregate':
+        # The main line is within the cap; adding just one paise must reject
+        # the complete cart before any order, gateway request or stock write.
+        with app.app_context():
+            extra = Product(farmer_id=users['farmer'], name='Extra produce', price=0.01,
+                            quantity='1 kg', category='Vegetables')
+            db.session.add(extra)
+            db.session.commit()
+            extra_id = extra.id
+        add(client, extra_id, '1')
+    if method == 'cod':
+        response = checkout(client)
+        assert response.status_code == 302
+        assert response.location.endswith('/cart/')
+        with client.session_transaction() as session:
+            assert any('total is too large' in text for _, text in session['_flashes'])
+    else:
+        response = begin_payment(client)
+        assert response.status_code == 400
+        assert 'total is too large' in response.get_json()['error']
+    assert gateway['requests'] == []
+    with app.app_context():
+        assert CheckoutAttempt.query.count() == 0
+        assert Order.query.count() == 0
+        assert db.session.get(Product, product_id).quantity == '500 kg'
+        assert CartItem.query.filter_by(product_id=product_id).one().quantity == 500
+        if cart_shape == 'aggregate':
+            assert db.session.get(Product, extra_id).quantity == '1 kg'
+            assert CartItem.query.filter_by(product_id=extra_id).one().quantity == 1
 
 
 def confirm(client, gateway_id, payment_id='pay_1', signature=None):

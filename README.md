@@ -56,6 +56,14 @@ venv/bin/python scripts/check_ui.py --browser-executable /usr/bin/chromium
 
 Use the path to your installed Chromium. If no system browser is available, install the Playwright browser with `venv/bin/python -m playwright install chromium` and omit `--browser-executable`. This optional download requires network access to Playwright's browser distribution hosts. Screenshots are written under `/tmp/organic-farming-ui` by default; use `--artifacts` to change that location.
 
+For a real PostgreSQL startup and write check, use a running Docker daemon:
+
+```bash
+venv/bin/python scripts/check_postgres.py
+```
+
+This starts a temporary PostgreSQL 16 container with generated credentials, runs core application workflows and removes its own container. It does not use your Render database or credentials. Docker downloads the official `postgres:16-alpine` image if it is not cached.
+
 ## Optional integrations
 
 | Setting | Purpose | Behavior when absent |
@@ -63,7 +71,7 @@ Use the path to your installed Chromium. If no system browser is available, inst
 | `GEMINI_API_KEY` | AI conversation, image analysis, optional translation of dynamic English content | Curated multilingual topic guidance; dynamic content stays in its original language; no invented diagnosis |
 | `OPENWEATHER_API_KEY` | Current weather from OpenWeather | Weather unavailable message; no random readings |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Merchant online checkout | Cash on delivery remains available |
-| `DATABASE_URL` | PostgreSQL connection; `postgres://` is normalized | Local SQLite database |
+| `DATABASE_URL` | PostgreSQL connection; `postgres://` and `postgresql://` explicitly use the installed psycopg2 driver | Local SQLite database |
 | `SECRET_KEY` | Stable session signing across restarts/workers | Temporary development key; required in production |
 
 Required HTTPS destinations for enabled integrations are `generativelanguage.googleapis.com`, `api.openweathermap.org`, `api.razorpay.com` and the browser payment SDK at `checkout.razorpay.com`. Configure these in the hosting environment's network settings when enabling the corresponding service. Core styles, scripts, icons and artwork are served locally.

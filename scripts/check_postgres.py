@@ -1,0 +1,124 @@
+"""Check real PostgreSQL startup and core writes in an isolated Docker database.
+
+Run from an installed project venv. Requires a running Docker daemon; no Render
+credentials are used, and only the container created by this command is removed.
+"""
+from datetime import datetime
+from decimal import Decimal
+from pathlib import Path
+import os
+import re
+import secrets
+import subprocess
+import sys
+import tempfile
+import time
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import URL
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from app import create_app
+from config import normalize_database_url
+from database.seed import seed_roadmaps
+from farm_tools_models import FarmLedgerEntry, FarmTask
+from models import db, User, Product, Order, CheckoutAttempt, CropRoadmap
+
+
+def main():
+    container = 'organic-postgres-check-' + secrets.token_hex(6)
+    password = secrets.token_urlsafe(32)
+    environment = dict(os.environ, POSTGRES_PASSWORD=password)
+    subprocess.run([
+        'docker', 'run', '--detach', '--rm', '--name', container,
+        '--publish', '127.0.0.1::5432', '--memory', '256m', '--cpus', '1',
+        '--env', 'POSTGRES_PASSWORD', '--env', 'POSTGRES_DB=organic_farming_check',
+        'postgres:16-alpine',
+    ], env=environment, check=True, capture_output=True, text=True)
+    application = None
+    try:
+        address = subprocess.check_output(['docker', 'port', container, '5432/tcp'], text=True).strip()
+        uri = normalize_database_url(URL.create('postgresql', username='postgres', password=password,
+            host='127.0.0.1', port=int(address.rsplit(':', 1)[1]), database='organic_farming_check',
+            query={'connect_timeout': '2'}).render_as_string(hide_password=False))
+        engine = create_engine(uri)
+        deadline = time.monotonic() + 40
+        while True:
+            try:
+                with engine.connect() as connection:
+                    connection.execute(text('SELECT 1'))
+                break
+            except Exception:
+                if time.monotonic() >= deadline:
+                    raise RuntimeError('Temporary PostgreSQL did not become ready.') from None
+                time.sleep(.25)
+        engine.dispose()
+        with tempfile.TemporaryDirectory(prefix='organic-postgres-uploads-') as directory:
+            application = create_app({'TESTING': True, 'SECRET_KEY': secrets.token_hex(32),
+                'SQLALCHEMY_DATABASE_URI': uri, 'UPLOAD_FOLDER': directory, 'CSRF_ENABLED': False,
+                'SESSION_COOKIE_SECURE': False, 'GEMINI_API_KEY': '', 'OPENWEATHER_API_KEY': '',
+                'RAZORPAY_KEY_ID': '', 'RAZORPAY_KEY_SECRET': ''})
+            farmer, buyer = application.test_client(), application.test_client()
+            for role, client in [('farmer', farmer), ('buyer', buyer)]:
+                registration = client.post('/auth/register', data={'name': 'Postgres ' + role,
+                    'email': role + '@postgres.example', 'password': 'Temporary-check-43!',
+                    'confirm_password': 'Temporary-check-43!', 'role': role})
+                assert registration.status_code == 302
+                login = client.post('/auth/login', data={'email': role + '@postgres.example',
+                    'password': 'Temporary-check-43!'})
+                assert login.status_code == 302
+            assert farmer.post('/marketplace/add', data={'name': 'Test tomatoes', 'price': '19.95',
+                'quantity': '10 kg', 'category': 'Vegetables'}).status_code == 302
+            with application.app_context():
+                product_id = Product.query.one().id
+                assert db.engine.dialect.driver == 'psycopg2'
+                assert CropRoadmap.query.count() == 10
+                assert seed_roadmaps() == 0
+            assert buyer.post(f'/cart/add/{product_id}', data={'quantity': '2'}).status_code == 302
+            cart = buyer.get('/cart/')
+            token = re.search(rb'name="checkout_token" value="([^"]+)"', cart.data).group(1).decode()
+            checkout = buyer.post('/cart/checkout', data={'checkout_token': token,
+                'delivery_location': 'Test village, Sambhajinagar 431001'})
+            assert checkout.status_code == 302 and checkout.location.endswith('/orders/my')
+            with application.app_context():
+                order = Order.query.one()
+                order_id = order.id
+                assert order.product_name == 'Test tomatoes' and order.quantity_unit == 'kg'
+                assert Decimal(str(order.total_price)).quantize(Decimal('.01')) == Decimal('39.90')
+                assert Product.query.one().quantity == '8 kg'
+                assert CheckoutAttempt.query.one().status == 'complete'
+            for status in ('accepted', 'shipped', 'delivered'):
+                assert farmer.post(f'/orders/{order_id}/update', data={'status': status}).status_code == 302
+            assert buyer.post(f'/orders/{order_id}/rate', data={'stars': '5', 'review': 'Fresh produce'}).status_code == 302
+            today = datetime.now(ZoneInfo('Asia/Kolkata')).date().isoformat()
+            assert farmer.get('/farm-tools').status_code == 200
+            with farmer.session_transaction() as session:
+                task_token = session['farm_tools_task_token']
+            assert farmer.post('/farm-tools/tasks', data={'submission_id':task_token,
+                'title':'Check irrigation','crop':'Tomato','due_date':today}).status_code == 303
+            for kind, amount in [('expense','0.10'), ('income','0.30')]:
+                farmer.get('/farm-tools')
+                with farmer.session_transaction() as session:
+                    ledger_token = session['farm_tools_ledger_token']
+                assert farmer.post('/farm-tools/ledger', data={'submission_id':ledger_token,
+                    'kind':kind,'amount':amount,'category':'other','entry_date':today}).status_code == 303
+            with application.app_context():
+                amounts = {entry.kind:entry.amount for entry in FarmLedgerEntry.query.all()}
+                assert amounts['income'] - amounts['expense'] == Decimal('0.20')
+                assert FarmTask.query.one().title == 'Check irrigation'
+                assert User.query.count() == 2
+                assert Order.query.one().rating.stars == 5
+                db.create_all()
+            assert b'0.30' in farmer.get('/farm-tools/ledger.csv?month=' + today[:7]).data
+            print('PostgreSQL 16 checks passed: app startup, schema, idempotent guides, accounts, stock, COD checkout/receipt, delivery/rating, tasks, exact ledger writes and CSV.')
+    finally:
+        if application:
+            with application.app_context():
+                db.session.remove()
+                db.engine.dispose()
+        subprocess.run(['docker','stop','--time','2',container],check=False,capture_output=True)
+
+
+if __name__ == '__main__':
+    main()

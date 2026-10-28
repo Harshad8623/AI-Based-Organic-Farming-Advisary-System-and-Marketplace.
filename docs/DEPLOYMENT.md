@@ -6,6 +6,8 @@ Use the pinned Python 3.12.14 and requirements. Set `APP_ENV=production` and pro
 
 Use a persistent PostgreSQL `DATABASE_URL` or a genuinely persistent SQLite volume for a single-instance deployment. Keep `static/uploads` on persistent storage as well; a persistent database does not preserve files on an ephemeral application filesystem. Back up both data stores before upgrades and test restoration.
 
+Driverless `postgres://` and `postgresql://` connection strings are normalized to `postgresql+psycopg2://`, matching the installed `psycopg2-binary` dependency. This avoids SQLAlchemy 2.1 selecting the uninstalled psycopg 3 driver. Keep your existing Render `DATABASE_URL`; credentials and query options are preserved. Explicit driver URLs are left unchanged and require their corresponding driver to be installed.
+
 Initialize once before launching multiple workers:
 
 ```bash

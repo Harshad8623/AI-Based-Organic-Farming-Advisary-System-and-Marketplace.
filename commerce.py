@@ -11,6 +11,8 @@ _STOCK = re.compile(
     re.IGNORECASE,
 )
 MAX_QUANTITY = 500
+# Keep every persisted checkout total below PostgreSQL's signed INTEGER range
+# (2,147,483,647 paise), as well as the existing ₹1 crore order limit.
 MAX_TOTAL_PAISE = 1_000_000_000
 
 
