@@ -1332,6 +1332,268 @@ Object.assign(TRANSLATIONS.mr, {
 Object.assign(TRANSLATIONS.en, {register_password_ph: '8–128 characters'});
 Object.assign(TRANSLATIONS.hi, {register_password_ph: '8–128 अक्षर'});
 Object.assign(TRANSLATIONS.mr, {register_password_ph: '8–128 अक्षरे'});
+/* Practical farm navigation and everyday language. */
+(() => {
+  const copy = {
+  "app_notebook": [
+    "Your farm notebook",
+    "आपके खेत की डायरी",
+    "तुमच्या शेतीची वही"
+  ],
+  "app_my_farm": [
+    "My farm",
+    "मेरा खेत",
+    "माझं शेत"
+  ],
+  "app_work_money": [
+    "Work & money",
+    "काम और हिसाब",
+    "काम व हिशेब"
+  ],
+  "app_market": [
+    "Market",
+    "बाज़ार",
+    "बाजार"
+  ],
+  "app_more_tools": [
+    "More tools",
+    "अन्य साधन",
+    "इतर साधने"
+  ],
+  "app_more": [
+    "More",
+    "और",
+    "इतर"
+  ],
+  "app_overview": [
+    "Overview",
+    "एक नज़र में",
+    "आढावा"
+  ],
+  "app_cost_tools": [
+    "Costs & selling decisions",
+    "खर्च और बिक्री का हिसाब",
+    "खर्च व विक्रीचा हिशेब"
+  ],
+  "app_incoming_orders": [
+    "Incoming orders",
+    "आए हुए ऑर्डर",
+    "आलेल्या ऑर्डर"
+  ],
+  "app_crop_demo": [
+    "Crop model · learning demo",
+    "फसल मॉडल · सीखने के लिए",
+    "पीक मॉडेल · शिकण्यासाठी"
+  ],
+  "app_footer_note": [
+    "Field records, clear next steps and your farm accounts.",
+    "खेत की नोंद, अगला काम और खेती का हिसाब।",
+    "शेताची नोंद, पुढचं काम आणि शेतीचा हिशेब."
+  ],
+  "app_quick_navigation": [
+    "Quick navigation",
+    "मुख्य पृष्ठों के लिंक",
+    "मुख्य पानांचे दुवे"
+  ],
+  "app_daily_note": [
+    "For today's farm work",
+    "आज के खेत के काम के लिए",
+    "आजच्या शेतीच्या कामासाठी"
+  ],
+  "app_home_heading": [
+    "What needs attention on your farm?",
+    "आज खेत में क्या देखना है?",
+    "आज शेतात काय पाहायचं?"
+  ],
+  "app_home_intro": [
+    "Record what you see, understand the next step and keep track of what it costs.",
+    "खेत की स्थिति दर्ज करें। अगला काम और उसका कारण समझें। खर्च का हिसाब रखें।",
+    "शेतातली परिस्थिती नोंदवा. पुढचं काम आणि त्यामागचं कारण समजून घ्या. खर्चाचा हिशेब ठेवा."
+  ],
+  "app_start_free": [
+    "Create my account",
+    "मेरा खाता बनाएँ",
+    "माझं खातं तयार करा"
+  ],
+  "app_already_account": [
+    "I already have an account",
+    "मेरा खाता पहले से है",
+    "माझं खातं आधीच आहे"
+  ],
+  "app_main_tools": [
+    "Main farm tools",
+    "खेती के मुख्य साधन",
+    "शेतीची मुख्य साधने"
+  ],
+  "app_field_entry": [
+    "My fields & today's advice",
+    "मेरे खेत और आज की सलाह",
+    "माझी शेतं आणि आजचा सल्ला"
+  ],
+  "app_field_entry_note": [
+    "Add your crop and field conditions. See what to check first, why it matters and what information is missing.",
+    "फसल और खेत की स्थिति भरें। पहले क्या जाँचना है, क्यों और कौन-सी जानकारी बाकी है—यह देखें।",
+    "पीक आणि शेताची स्थिती भरा. आधी काय तपासायचं, का आणि कोणती माहिती अपुरी आहे ते पाहा."
+  ],
+  "app_money_entry": [
+    "My work & farm accounts",
+    "मेरे काम और खेती का हिसाब",
+    "माझी कामं आणि शेतीचा हिशेब"
+  ],
+  "app_money_entry_note": [
+    "Save work with due dates. Record money received and spent, and review the month's total.",
+    "काम की तारीख लिखें। मिले और खर्च हुए पैसे दर्ज करके महीने का हिसाब देखें।",
+    "कामाची तारीख ठरवा. मिळालेले आणि खर्च झालेले पैसे नोंदवून महिन्याचा हिशेब पाहा."
+  ],
+  "app_market_entry": [
+    "Buy or sell farm produce",
+    "उपज खरीदें या बेचें",
+    "शेतमाल खरेदी किंवा विक्री"
+  ],
+  "app_market_entry_note": [
+    "Check the available quantity and price per unit. Agree on delivery and track the order.",
+    "उपलब्ध मात्रा और इकाई की कीमत जाँचें। डिलीवरी तय करें और ऑर्डर की स्थिति देखें।",
+    "उपलब्ध प्रमाण आणि एका एककाची किंमत तपासा. पोहोचवण्याची व्यवस्था ठरवा आणि ऑर्डरची स्थिती पाहा."
+  ],
+  "app_how_heading": [
+    "A useful record, every day",
+    "रोज की काम आने वाली नोंद",
+    "दररोजची उपयोगी नोंद"
+  ],
+  "app_step_observe": [
+    "Look at the field",
+    "खेत देखें",
+    "शेताची पाहणी करा"
+  ],
+  "app_step_observe_note": [
+    "Note soil moisture, rain and affected plants.",
+    "मिट्टी की नमी, बारिश और प्रभावित पौधों की नोंद लें।",
+    "मातीचा ओलावा, पाऊस आणि बाधित झाडांची नोंद घ्या."
+  ],
+  "app_step_decide": [
+    "Check the reasons",
+    "कारण समझें",
+    "कारण समजून घ्या"
+  ],
+  "app_step_decide_note": [
+    "Advice uses your entered conditions. Missing information is shown clearly.",
+    "सलाह आपकी दी हुई जानकारी पर आधारित है। अधूरी जानकारी साफ बताई जाती है।",
+    "सल्ला तुम्ही भरलेल्या माहितीवर आधारित आहे. अपुरी माहिती स्पष्ट दाखवली जाते."
+  ],
+  "app_step_record": [
+    "Record the result",
+    "नतीजा दर्ज करें",
+    "परिणाम नोंदवा"
+  ],
+  "app_step_record_note": [
+    "Save the work, its cost and whether the condition improved.",
+    "काम, खर्च और स्थिति में सुधार हुआ या नहीं—यह लिखें।",
+    "काम, त्याचा खर्च आणि स्थिती सुधारली का ते लिहा."
+  ],
+  "app_advice_scope": [
+    "Field guidance supports your decisions. It does not confirm a disease or replace a local agricultural expert.",
+    "खेत की सलाह निर्णय में मदद करती है। यह रोग की पुष्टि या स्थानीय कृषि विशेषज्ञ की जगह नहीं लेती।",
+    "शेताचा सल्ला निर्णय घेण्यास मदत करतो. तो रोगाची खात्री करत नाही; गरजेनुसार स्थानिक कृषी तज्ज्ञांचा सल्ला घ्या."
+  ],
+  "app_about_heading": [
+    "About this project",
+    "इस प्रोजेक्ट के बारे में",
+    "या प्रकल्पाबद्दल"
+  ],
+  "app_about_note": [
+    "A farm notebook, explained decision support and a local marketplace. Available in English, Hindi and Marathi.",
+    "खेत की डायरी, कारण के साथ सलाह और स्थानीय बाज़ार। English, हिंदी और मराठी में।",
+    "शेतीची वही, कारणासह सल्ला आणि स्थानिक बाजार. English, हिंदी आणि मराठीत."
+  ],
+  "app_farm_overview_note": [
+    "Your fields, work and money in one place.",
+    "आपके खेत, काम और हिसाब एक जगह।",
+    "तुमची शेतं, कामं आणि हिशेब एकाच ठिकाणी."
+  ],
+  "app_check_my_fields": [
+    "Check my fields",
+    "मेरे खेत देखें",
+    "माझी शेतं पाहा"
+  ],
+  "app_farm_activity": [
+    "Your recorded farm activity",
+    "आपकी दर्ज की हुई खेती की जानकारी",
+    "तुम्ही नोंदवलेली शेतीची माहिती"
+  ],
+  "app_active_fields": [
+    "Active fields",
+    "चालू खेत",
+    "चालू शेतं"
+  ],
+  "app_open_work": [
+    "Open tasks",
+    "बाकी काम",
+    "बाकी कामं"
+  ],
+  "app_overdue": [
+    "overdue",
+    "तारीख निकल गई",
+    "तारीख उलटलेली"
+  ],
+  "app_month_received": [
+    "Recorded income this month",
+    "इस महीने दर्ज आय",
+    "या महिन्यात नोंदवलेलं उत्पन्न"
+  ],
+  "app_month_spent": [
+    "Recorded expenses this month",
+    "इस महीने दर्ज खर्च",
+    "या महिन्यात नोंदवलेला खर्च"
+  ],
+  "app_manual_totals_note": [
+    "Money totals are your manual diary entries, separate from marketplace orders.",
+    "यह आपकी डायरी में दर्ज किया गया हिसाब है। बाज़ार के ऑर्डर अलग हैं।",
+    "हा तुम्ही वहीत नोंदवलेला हिशेब आहे. बाजारातील ऑर्डर यापासून वेगळ्या आहेत."
+  ],
+  "app_next_actions": [
+    "Next actions",
+    "अगले काम",
+    "पुढची कामं"
+  ],
+  "app_cost_tools_note": [
+    "Work through the numbers before spending or agreeing on a selling price.",
+    "खर्च करने या बिक्री की कीमत तय करने से पहले हिसाब जाँचें।",
+    "खर्च करण्यापूर्वी किंवा विक्रीची किंमत ठरवण्यापूर्वी हिशेब तपासा."
+  ],
+  "app_my_sales": [
+    "My market activity",
+    "बाज़ार में मेरा काम",
+    "बाजारातील माझी माहिती"
+  ],
+  "app_listings": [
+    "listings",
+    "उत्पाद नोंद",
+    "उत्पादन नोंदी"
+  ],
+  "app_orders": [
+    "orders",
+    "ऑर्डर",
+    "ऑर्डर"
+  ],
+  "app_no_listings": [
+    "No produce listed yet. Add a listing when you have stock ready to sell.",
+    "अभी उपज की नोंद नहीं है। बेचने के लिए माल तैयार हो तो जोड़ें।",
+    "अजून शेतमालाची नोंद नाही. माल विक्रीसाठी तयार झाल्यावर जोडा."
+  ],
+  "app_buyer_overview_note": [
+    "Buy from farmers and keep your orders together.",
+    "किसानों से खरीदें और अपने ऑर्डर एक जगह देखें।",
+    "शेतकऱ्यांकडून खरेदी करा आणि आपल्या ऑर्डर एकाच ठिकाणी पाहा."
+  ],
+  "app_browse_produce": [
+    "Browse produce",
+    "उपज देखें",
+    "शेतमाल पाहा"
+  ]
+};
+  ['en', 'hi', 'mr'].forEach((lang, index) => Object.entries(copy).forEach(([key, values]) => { TRANSLATIONS[lang][key] = values[index]; }));
+})();
+
 const I18n = (() => {
   const STORAGE_KEY = 'krishiai_lang';
   const DEFAULT_LANG = 'en';

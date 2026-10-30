@@ -289,3 +289,141 @@ def test_invalid_task_state_leaves_record_unchanged(app, client, farmers):
     assert client.get(f'/farm-tools/tasks/{task_id}/delete').status_code == 405
     with app.app_context():
         assert not db.session.get(FarmTask, task_id).is_done
+
+
+def advice_task(app, farmer_id, *, title='Original advisory task'):
+    """Create a saved advice action without depending on browser form helpers."""
+    from datetime import datetime, timezone
+    from advisory.engine import analyze_context
+    from advisory_models import FarmField, FieldObservation, AdvisoryTaskLink
+    with app.app_context():
+        field = FarmField(farmer_id=farmer_id, name='North field', crop='tomato',
+            stage='vegetative', soil='loamy', irrigation='drip', submission_id=secrets.token_urlsafe(32))
+        db.session.add(field); db.session.flush()
+        checked = datetime(2026, 10, 28, 6, tzinfo=timezone.utc)
+        observation = {'moisture':'dry','waterlogging':False,'pest_present':False,'leaf_symptoms':'none'}
+        report = analyze_context(field.context_snapshot(), observation, now=checked)
+        row = FieldObservation(farmer_id=farmer_id, field_id=field.id,
+            field_snapshot=field.context_snapshot(), observation_data=observation, report_data=report,
+            submission_id=secrets.token_urlsafe(32), created_at=checked)
+        task = FarmTask(farmer_id=farmer_id, title=title, crop=field.name,
+            due_date=date(2026,10,28), submission_id=secrets.token_urlsafe(32))
+        db.session.add_all([row, task]); db.session.flush()
+        db.session.add(AdvisoryTaskLink(farmer_id=farmer_id, observation_id=row.id,
+            action_code='dry_soil', task_id=task.id))
+        db.session.commit()
+        return field.id, row.id, task.id
+
+
+@pytest.mark.parametrize('hour,minute,expected_date', [(18,29,date(2026,10,28)), (18,30,date(2026,10,29))])
+def test_advice_task_source_uses_indian_calendar_date(app, client, farmers, hour, minute, expected_date):
+    from datetime import datetime, timezone
+    from advisory_models import FieldObservation
+    _, report_id, task_id = advice_task(app, farmers[0])
+    with app.app_context():
+        db.session.get(FieldObservation, report_id).created_at = datetime(2026,10,28,hour,minute,tzinfo=timezone.utc)
+        db.session.commit()
+    sign_in(client, farmers[0])
+    context = rendered_context(app, client, '/farm-tools')
+    assert context['task_advice'][task_id]['date'] == expected_date
+
+
+def test_saved_advice_task_requires_review_after_new_wet_check_but_manual_work_unchanged(app, client, farmers):
+    from datetime import datetime, timezone
+    from advisory_models import FarmField, FieldObservation
+    from advisory.engine import analyze_context
+    field_id, report_id, task_id = advice_task(app, farmers[0])
+    sign_in(client, farmers[0])
+    manual = client.post('/farm-tools/tasks', data=task_data(client, title='Buy harvest bags'))
+    assert manual.status_code == 303
+    fresh = rendered_context(app, client, '/farm-tools')
+    assert fresh['task_advice'][task_id]['stale'] is False
+    fresh_page = client.get('/farm-tools')
+    assert f'/my-farm/reports/{report_id}'.encode() in fresh_page.data
+    assert b'data-advice-review-required' not in fresh_page.data
+    # Full instructions are reachable; task labels never silently truncate them.
+    with app.app_context():
+        original = db.session.get(FieldObservation, report_id)
+        full_action = next(p for p in original.report_data['priorities'] if p['code']=='dry_soil')['action']
+        assert full_action.encode() in fresh_page.data
+        field = db.session.get(FarmField, field_id)
+        wet = {'moisture':'wet','waterlogging':True,'pest_present':False,'leaf_symptoms':'wilting'}
+        later = FieldObservation(farmer_id=farmers[0], field_id=field_id,
+            field_snapshot=field.context_snapshot(), observation_data=wet,
+            report_data=analyze_context(field.context_snapshot(), wet),
+            submission_id=secrets.token_urlsafe(32), created_at=datetime(2026,10,28,7,tzinfo=timezone.utc))
+        db.session.add(later); db.session.commit(); latest_id = later.id
+    context = rendered_context(app, client, '/farm-tools')
+    assert context['task_advice'][task_id]['stale'] is True
+    assert context['task_advice'][task_id]['latest_report_id'] == latest_id
+    page = client.get('/farm-tools')
+    assert b'data-advice-review-required' in page.data
+    assert f'/my-farm/reports/{latest_id}'.encode() in page.data
+    assert b'I already did this' in page.data
+    assert b'Buy harvest bags' in page.data
+    with app.app_context():
+        assert FarmTask.query.count() == 2
+        assert not db.session.get(FarmTask, task_id).is_done
+    # Recording already-completed work remains possible without claiming the
+    # outdated recommendation is a current instruction.
+    assert client.post(f'/farm-tools/tasks/{task_id}/status', data={'is_done':'1'}).status_code == 303
+    assert b'data-advice-review-required' not in client.get('/farm-tools').data
+    with app.app_context():
+        assert db.session.get(FarmTask, task_id).is_done
+        assert FieldObservation.query.count() == 2
+
+
+@pytest.mark.parametrize('change', ['profile', 'age', 'archive'])
+def test_saved_advice_task_uses_same_profile_age_and_archive_freshness_as_report(app, client, farmers, change):
+    from datetime import datetime, timezone
+    from advisory_models import FarmField, FieldObservation
+    from advisory.freshness import report_is_stale, latest_report_keys
+    field_id, report_id, task_id = advice_task(app, farmers[0])
+    sign_in(client, farmers[0])
+    with app.app_context():
+        field, report = db.session.get(FarmField, field_id), db.session.get(FieldObservation, report_id)
+        if change == 'profile': field.stage = 'flowering'
+        elif change == 'age': report.created_at = datetime(2026,10,18,6,tzinfo=timezone.utc)
+        else: field.archived = True
+        db.session.commit()
+        assert report_is_stale(report, date(2026,10,28), latest_report_keys(farmers[0],[field_id])[field_id])
+    context = rendered_context(app, client, '/farm-tools')
+    assert context['task_advice'][task_id]['stale'] is True
+    assert f'/my-farm/fields/{field_id}'.encode() in client.get('/farm-tools').data
+
+
+def test_plan_metadata_never_exposes_another_farmers_report_even_with_corrupt_link(app, client, farmers):
+    from advisory_models import AdvisoryTaskLink
+    _, private_report, other_task = advice_task(app, farmers[1], title='Private other-farmer work')
+    sign_in(client, farmers[0])
+    client.post('/farm-tools/tasks', data=task_data(client, title='My ordinary task'))
+    with app.app_context():
+        own_task = FarmTask.query.filter_by(farmer_id=farmers[0]).one()
+        db.session.add(AdvisoryTaskLink(farmer_id=farmers[0], observation_id=private_report,
+            action_code='invalid-cross-owner-link', task_id=own_task.id))
+        db.session.commit()
+    context = rendered_context(app, client, '/farm-tools')
+    assert context['task_advice'] == {}
+    page = client.get('/farm-tools')
+    assert b'My ordinary task' in page.data
+    assert b'Private other-farmer work' not in page.data
+    assert f'/my-farm/reports/{private_report}'.encode() not in page.data
+
+
+def test_advice_task_provenance_uses_bulk_queries(app, client, farmers):
+    from sqlalchemy import event
+    for _ in range(5): advice_task(app, farmers[0])
+    sign_in(client, farmers[0])
+    statements = []
+    def record(conn, cursor, statement, parameters, context, executemany):
+        if 'advisory_task_links' in statement or 'field_observations' in statement:
+            statements.append(statement)
+    with app.app_context():
+        engine = db.engine
+        event.listen(engine, 'before_cursor_execute', record)
+        try:
+            response = client.get('/farm-tools')
+        finally:
+            event.remove(engine, 'before_cursor_execute', record)
+    assert response.status_code == 200
+    assert len(statements) == 2

@@ -23,6 +23,7 @@ from app import create_app
 from config import normalize_database_url
 from database.seed import seed_roadmaps
 from farm_tools_models import FarmLedgerEntry, FarmTask
+from advisory_models import FarmField, FieldObservation, AdvisoryFollowup, AdvisoryTaskLink
 from models import db, User, Product, Order, CheckoutAttempt, CropRoadmap
 
 
@@ -111,7 +112,57 @@ def main():
                 assert Order.query.one().rating.stars == 5
                 db.create_all()
             assert b'0.30' in farmer.get('/farm-tools/ledger.csv?month=' + today[:7]).data
-            print('PostgreSQL 16 checks passed: app startup, schema, idempotent guides, accounts, stock, COD checkout/receipt, delivery/rating, tasks, exact ledger writes and CSV.')
+            # New field observations and advice snapshots must work with real JSON,
+            # fixed-scale area values, ownership and foreign keys on PostgreSQL.
+            assert farmer.get('/my-farm/fields/new').status_code == 200
+            with farmer.session_transaction() as session:
+                field_token = session['advisory_field_token']
+            field_response = farmer.post('/my-farm/fields', data={'submission_id':field_token,
+                'name':'North tomato field','crop':'tomato','stage':'vegetative','soil':'loamy',
+                'irrigation':'drip','area_value':'1','area_unit':'acre','planting_date':today})
+            assert field_response.status_code == 303
+            field_id = int(field_response.location.rsplit('/',1)[1])
+            report_ids = []
+            for index in range(2):
+                farmer.get(f'/my-farm/fields/{field_id}')
+                with farmer.session_transaction() as session:
+                    observation_token = session['advisory_observation_token']
+                response = farmer.post(f'/my-farm/fields/{field_id}/observe',data={
+                    'submission_id':observation_token,'moisture':'wet','waterlogging':'1',
+                    'pest_present':'0','leaf_symptoms':'wilting','inspected_plants':'10',
+                    'affected_plants':'2','notes':'पाणी साचले आहे आणि पाने कोमेजली आहेत'})
+                assert response.status_code == 303
+                report_id = int(response.location.rsplit('/',1)[1])
+                report_ids.append(report_id)
+                assert farmer.get(response.location).status_code == 200
+                if index == 0:
+                    with application.app_context():
+                        row = db.session.get(FieldObservation,report_id)
+                        action_code = row.report_data['priorities'][0]['code']
+                    assert farmer.post(f'/my-farm/reports/{report_id}/actions/{action_code}',
+                                       data={'language':'mr'}).status_code == 303
+                    assert farmer.post(f'/my-farm/reports/{report_id}/followup',data={
+                        'verdict':'improved','note':'निचरा तपासला'}).status_code == 303
+            learned_report = farmer.get(f'/my-farm/reports/{report_ids[-1]}')
+            assert f'href="/my-farm/reports/{report_ids[0]}"'.encode() in learned_report.data
+            with application.app_context():
+                assert FarmField.query.one().area_m2 == Decimal('4046.86')
+                assert FieldObservation.query.count() == 2
+                assert AdvisoryFollowup.query.one().verdict == 'improved'
+                saved = AdvisoryTaskLink.query.one()
+                assert saved.task is not None
+                saved_task_id = saved.task_id
+            assert farmer.post(f'/farm-tools/tasks/{saved_task_id}/delete').status_code == 303
+            with application.app_context():
+                assert AdvisoryTaskLink.query.one().task_id is None
+                db.create_all()
+            assert buyer.get(f'/my-farm/reports/{report_ids[0]}').status_code == 403
+            economics = farmer.post('/farm-decisions',data={'calculator':'sales','harvest_quantity':'1000',
+                'harvest_unit':'kg','cost_source':'manual','cultivation_cost':'12000',
+                'farmgate_price':'18','farmgate_price_unit':'kg','market_price':'22',
+                'market_price_unit':'kg','transport_cost':'3000','market_fees':'0','spoilage_percent':'10'})
+            assert economics.status_code == 200 and b'6,000.00' in economics.data and b'4,800.00' in economics.data
+            print('PostgreSQL 16 checks passed: startup/schema, guides, accounts, orders/receipts/stock, ledger/CSV, field JSON snapshots, action/task links, outcomes, local ML cases, and cost calculations.')
     finally:
         if application:
             with application.app_context():

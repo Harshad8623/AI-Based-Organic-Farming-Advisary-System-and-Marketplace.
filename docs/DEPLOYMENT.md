@@ -27,6 +27,12 @@ The app verifies the payment signature, captured state, amount, INR currency, bu
 
 There is no automatic refund service, webhook reconciliation, seller settlement or operator refund dashboard in this project. A captured payment that reaches confirmation after stock or price changes must be reconciled by the merchant operator. Paid-online orders cannot be rejected through the farmer's normal cancellation control. Before accepting live money, establish and test an operator reconciliation/refund process, and add automated webhooks/refunds if required by the business. Do not describe a test checkout as proof of live settlement.
 
+## Field advisory records
+
+The new field profiles, observation snapshots, reported outcomes and task links use additive tables. Existing database columns remain unchanged. Initialize once before multiple workers and back up before upgrading. Case retrieval uses only a farmer's earlier private records and is bounded; no model download or paid API is required. Its first meaningful case results appear after relevant field history is entered.
+
+These changes do not restore a deleted Render database. The web service still needs an Available PostgreSQL service and its current connection URL in `DATABASE_URL`. If the former database was deleted, restore from backup where available or configure a replacement in the same Render workspace/region; new tables alone cannot recover old records.
+
 ## Agricultural information
 
 The crop explorer uses generated training examples and has no established field accuracy. Keep its educational label. Never replace it with a crop, yield or fertilizer guarantee without validated data, units and agronomic evaluation.

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}My fields — Dharti Rakshak{% endblock %}
+{% block head_extra %}{% include 'advisory/_styles.html' %}{% endblock %}
+{% block content %}
+<div class="container advisory-shell">
+  <header class="page-header d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4">
+    <div><h1 data-i18n="adf_title">My fields</h1><p class="text-muted mb-0" data-i18n="adf_intro">Record what you see. Get a clear next step for each field.</p></div>
+    <a class="btn btn-success" href="{{ url_for('farm_advisory.new_field') }}" data-i18n="adf_add_field">Add a field</a>
+  </header>
+  <div class="d-flex gap-3 mb-3"><a href="{{ url_for('farm_advisory.index') }}" class="{{ 'fw-bold' if not archived }}" data-i18n="adf_active_fields">Active fields</a><a href="{{ url_for('farm_advisory.index', archived='1') }}" class="{{ 'fw-bold' if archived }}" data-i18n="adf_archived_fields">Archived fields</a></div>
+  {% if fields %}
+  <div class="field-grid">
+    {% for field in fields %}<article class="card field-card"><div class="card-body">
+      <h2 class="h5"><a href="{{ url_for('farm_advisory.field_detail', field_id=field.id) }}">{{ field.name }}</a></h2>
+      <p class="mb-2"><span data-localized="{{ crops[field.crop]|tojson|forceescape }}">{{ crops[field.crop].en }}</span> · <span data-localized="{{ stages[field.stage]|tojson|forceescape }}">{{ stages[field.stage].en }}</span></p>
+      {% if field.location %}<p class="text-muted small">{{ field.location }}</p>{% endif %}
+      {% if latest.get(field.id) %}<p class="small mb-3"><span data-i18n="adf_last_check">Last check</span>: <time data-adf-date="{{ latest[field.id].created_at.isoformat() }}">{{ latest[field.id].created_at.strftime('%d %b %Y') }}</time></p>{% else %}<p class="text-muted small" data-i18n="adf_no_checks">No field checks recorded yet.</p>{% endif %}
+      <a class="btn btn-outline-success w-100" href="{{ url_for('farm_advisory.field_detail', field_id=field.id) }}" data-i18n="{{ 'adf_view_history' if archived else 'adf_check_field' }}">{{ 'View history' if archived else 'Check this field' }}</a>
+    </div></article>{% endfor %}
+  </div>
+  {% else %}<section class="card"><div class="card-body py-5 text-center"><h2 class="h4" data-i18n="{{ 'adf_no_archived' if archived else 'adf_first_field' }}">{{ 'No archived fields' if archived else 'Start with your field' }}</h2><p class="text-muted" data-i18n="adf_first_hint">Add the crop, growth stage and water method once. Each short field check then creates a saved action plan.</p>{% if not archived %}<a href="{{ url_for('farm_advisory.new_field') }}" class="btn btn-success" data-i18n="adf_add_field">Add a field</a>{% endif %}</div></section>{% endif %}
+  <p class="advisory-note text-muted mt-4" data-i18n="adf_private_note">Your fields, observations and results are private to your account. Advice explains the observations and limits; it does not identify a disease or prescribe a chemical dose.</p>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/farm-advisory-i18n.js') }}"></script>{% endblock %}

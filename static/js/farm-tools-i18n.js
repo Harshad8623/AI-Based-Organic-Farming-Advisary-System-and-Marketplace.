@@ -71,6 +71,14 @@
     farm_error_amount: ['Enter a positive amount up to ₹99,999,999.99, with at most two decimal places.', '₹99,999,999.99 तक शून्य से अधिक राशि लिखें, दशमलव के बाद अधिकतम दो अंक रखें।', '₹99,999,999.99 पर्यंत शून्यापेक्षा मोठी रक्कम लिहा; दशांशानंतर जास्तीत जास्त दोन अंक ठेवा.'],
     farm_error_future_entry: ['Record money already received or paid. The date cannot be in the future.', 'मिल चुके या दिए गए पैसे ही दर्ज करें। भविष्य की तारीख नहीं चुनें।', 'मिळालेले किंवा दिलेले पैसेच नोंदवा. भविष्यातील तारीख निवडू नका.'],
     farm_error_expired_form: ['This form is out of date. Check your entries and submit again.', 'यह फॉर्म पुराना हो गया है। अपनी जानकारी जाँचकर फिर से जमा करें।', 'हा फॉर्म जुना झाला आहे. माहिती तपासा आणि पुन्हा जतन करा.'],
+    farm_advice_source: ['Saved field check', 'सहेजी गई खेत जाँच', 'जतन केलेली शेतपाहणी'],
+    farm_advice_review_title: ['Review needed before acting', 'काम से पहले फिर जाँचें', 'काम करण्यापूर्वी पुन्हा पाहा'],
+    farm_advice_review_note: ['This task came from a field check that needs review. Check current field conditions before using the saved instructions.', 'यह काम ऐसी खेत जाँच से आया है जिसकी फिर समीक्षा जरूरी है। पुरानी सूचना इस्तेमाल करने से पहले खेत की वर्तमान स्थिति जाँचें।', 'हे काम पुन्हा पाहणी आवश्यक असलेल्या जुन्या नोंदीतून आले आहे. जतन केलेल्या सूचना वापरण्यापूर्वी शेताची सध्याची स्थिती तपासा.'],
+    farm_advice_latest: ['Review latest plan', 'नवीनतम योजना देखें', 'नवीन योजना तपासा'],
+    farm_advice_new_check: ['Record a fresh field check', 'खेत की नई जाँच दर्ज करें', 'शेताची नवी पाहणी नोंदवा'],
+    farm_advice_field_history: ['Open field history', 'खेत की पिछली नोंदें देखें', 'शेताच्या मागील नोंदी पाहा'],
+    farm_advice_saved_instructions: ['Read the saved instructions', 'सहेजी गई सूचना पढ़ें', 'जतन केलेल्या सूचना वाचा'],
+    farm_advice_already_done: ['I already did this', 'यह काम मैंने पहले किया है', 'हे काम मी आधीच केले आहे'],
   };
 
   if (typeof TRANSLATIONS !== 'undefined') {
@@ -89,6 +97,13 @@
       if (!Number.isNaN(value.getTime())) element.textContent = formatter.format(value);
     });
     document.title = `${copy.farm_title[['en', 'hi', 'mr'].indexOf(lang)] || copy.farm_title[0]} — Dharti Rakshak`;
+    document.querySelectorAll('[data-farm-localized]').forEach(element => {
+      try {
+        const localized = JSON.parse(element.dataset.farmLocalized);
+        const value = localized[lang] || localized.en;
+        if (typeof value === 'string') element.textContent = value;
+      } catch (_) { /* A damaged optional label must not break task controls. */ }
+    });
   }
 
   function initialize() {

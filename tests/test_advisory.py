@@ -292,3 +292,60 @@ def test_vision_request_is_bounded_and_malformed_text_is_unavailable(tmp_path,mo
     assert result['available'] is False
     assert len(calls) == 1
     assert calls[0]['timeout'] <= 12
+
+
+@pytest.mark.parametrize('rain', [None, {}, {'3h': 6.5}])
+def test_unreported_hourly_rain_is_unknown_not_zero(app, client, farmer, monkeypatch, rain):
+    app.config['OPENWEATHER_API_KEY'] = 'test-key'
+    monkeypatch.setattr(weather.requests, 'get', lambda *a, **k: WeatherResponse(observation(rain=rain)))
+    response, context = context_for(app, lambda: client.get('/weather/?city=Pune'))
+    assert context['weather']['rain_mm'] is None
+    assert b'weather_not_reported' in response.data
+    assert 'advice_rain' in context['tips']
+
+
+def test_reported_zero_rain_is_distinct_from_missing_rain(app, client, farmer, monkeypatch):
+    app.config['OPENWEATHER_API_KEY'] = 'test-key'
+    monkeypatch.setattr(weather.requests, 'get', lambda *a, **k: WeatherResponse(observation(rain={'1h':0})))
+    response, context = context_for(app, lambda: client.get('/weather/?city=Pune'))
+    assert context['weather']['rain_mm'] == 0
+    assert b'0.0 mm' in response.data
+    assert b'weather_not_reported' not in response.data
+    assert context['weather']['observed_label'].endswith('IST')
+
+
+@pytest.mark.parametrize('change', [
+    {'main':{'temp':True,'feels_like':25,'humidity':60}},
+    {'wind':{'speed':False}}, {'rain':{'1h':True}}, {'name':None},
+    {'sys':{'country':{}}}, {'weather':[{'description':''}]},
+])
+def test_boolean_measurements_and_invalid_weather_labels_are_rejected(app, client, farmer, monkeypatch, change):
+    app.config['OPENWEATHER_API_KEY'] = 'test-key'
+    monkeypatch.setattr(weather.requests, 'get', lambda *a, **k: WeatherResponse(observation(**change)))
+    response, context = context_for(app, lambda: client.get('/weather/?city=Pune'))
+    assert context['weather'] is None
+    assert context['weather_error'] == 'weather_request_failed'
+
+
+def test_empty_weather_search_is_a_visible_validation_error(app, client, farmer, monkeypatch):
+    monkeypatch.setattr(weather.requests, 'get', lambda *a, **k: pytest.fail('Empty city must not call provider'))
+    response, context = context_for(app, lambda: client.get('/weather/?city=%20%20'))
+    assert context['weather_error'] == 'weather_city_invalid'
+    assert b'weather_city_invalid' in response.data
+
+
+def test_weather_location_error_can_be_translated_without_english_flash(app, client, farmer, monkeypatch):
+    app.config['OPENWEATHER_API_KEY'] = 'test-key'
+    monkeypatch.setattr(weather.requests, 'get', lambda *a, **k: WeatherResponse({}, status=404))
+    response, context = context_for(app, lambda: client.get('/weather/?city=Unknown'))
+    assert context['weather_detail'] == 'weather_city_not_found'
+    assert b'data-i18n="weather_city_not_found"' in response.data
+    assert b'City not found. Try' not in response.data
+
+
+def test_crop_planning_is_primary_and_synthetic_model_is_optional(app, client, farmer):
+    response = client.get('/crop/')
+    assert response.status_code == 200
+    assert b'href="/my-farm' in response.data
+    assert b'href="/farm-decisions' in response.data
+    assert b'<details class="card card-body" id="crop-demo" >' in response.data

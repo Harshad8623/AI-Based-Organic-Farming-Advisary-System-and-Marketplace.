@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Field details — Dharti Rakshak{% endblock %}
+{% block head_extra %}{% include 'advisory/_styles.html' %}{% endblock %}
+{% block content %}
+<div class="container advisory-shell" style="max-width:760px">
+  <a href="{{ url_for('farm_advisory.field_detail', field_id=field.id) if field else url_for('farm_advisory.index') }}" class="d-inline-block mb-3" data-i18n="adf_back">Back to my fields</a>
+  <h1 class="mb-2" data-i18n="{{ 'adf_edit_field' if field else 'adf_add_field' }}">{{ 'Update field details' if field else 'Add a field' }}</h1>
+  <p class="text-muted" data-i18n="adf_field_form_hint">Enter what you know. Leave area and planting date blank if unknown.</p>
+  {% if error %}<div class="alert alert-danger" role="alert" data-i18n="{{ error }}">Check the highlighted information and try again.</div>{% endif %}
+  <form class="card card-body field-form" action="{{ url_for('farm_advisory.edit_field', field_id=field.id) if field else url_for('farm_advisory.create_field') }}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if field %}<input type="hidden" name="version" value="{{ values.get('version',field.version) }}">{% else %}<input type="hidden" name="submission_id" value="{{ submission_id }}">{% endif %}
+    <div class="mb-3"><label for="field-name" class="form-label" data-i18n="adf_field_name">Field name</label><input id="field-name" class="form-control" name="name" value="{{ values.get('name','') }}" minlength="2" maxlength="80" required placeholder="e.g. North field" data-i18n-placeholder="adf_name_placeholder"></div>
+    <div class="mb-3"><label for="field-location" class="form-label" data-i18n="adf_location">Village or location (optional)</label><input id="field-location" name="location" class="form-control" maxlength="120" value="{{ values.get('location','') }}" autocomplete="address-level2"></div>
+    <div class="observation-grid mb-3">
+      {% for key,label,choices,default in [('crop','adf_crop',crops,'other'),('stage','adf_stage',stages,'unknown'),('soil','adf_soil',soils,'unknown'),('irrigation','adf_irrigation',irrigation,'rainfed')] %}
+      <div><label for="field-{{ key }}" class="form-label" data-i18n="{{ label }}">{{ key.title() }}</label><select class="form-select" id="field-{{ key }}" name="{{ key }}" required>{% for value,copy in choices.items() %}<option value="{{ value }}" {{ 'selected' if values.get(key,default)==value }} data-localized="{{ copy|tojson|forceescape }}">{{ copy.en }}</option>{% endfor %}</select></div>
+      {% endfor %}
+    </div>
+    <div class="observation-grid mb-3"><div><label for="field-area" class="form-label" data-i18n="adf_area">Area (optional)</label><input id="field-area" class="form-control" name="area_value" inputmode="decimal" maxlength="16" value="{{ values.get('area_value','') }}" placeholder="e.g. 2.5" aria-describedby="area-help"><small id="area-help" class="text-muted" data-i18n="adf_decimal_help">Use a dot for decimals, for example 2.5.</small></div><div><label for="area-unit" class="form-label" data-i18n="adf_unit">Unit</label><select id="area-unit" name="area_unit" class="form-select">{% for unit in ['acre','hectare','m2'] %}<option value="{{ unit }}" {{ 'selected' if values.get('area_unit','acre')==unit }} data-i18n="adf_unit_{{ unit }}">{{ unit }}</option>{% endfor %}</select></div></div>
+    <div class="mb-4"><label for="field-planting" class="form-label" data-i18n="adf_planting">Sowing or planting date (optional)</label><input id="field-planting" name="planting_date" class="form-control" type="date" min="1900-01-01" max="{{ today.isoformat() }}" value="{{ values.get('planting_date','') }}"></div>
+    <button class="btn btn-success" type="submit" data-i18n="adf_save_field">Save field</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/farm-advisory-i18n.js') }}"></script>{% endblock %}

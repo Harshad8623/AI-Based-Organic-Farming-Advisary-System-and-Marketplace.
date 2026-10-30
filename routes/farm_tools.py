@@ -2,7 +2,7 @@
 
 import calendar
 import csv
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from io import StringIO
@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from flask import Blueprint, abort, redirect, render_template, request, Response, session, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from models import db
 from farm_tools_models import FarmLedgerEntry, FarmTask
@@ -85,6 +86,40 @@ def _page_number(name):
     return max(1, number)
 
 
+def _advisory_task_context(tasks, today):
+    """Resolve plan provenance in bulk; never present old field advice as current."""
+    from advisory.freshness import latest_report_keys, report_is_stale
+    from advisory_models import AdvisoryTaskLink, FieldObservation, FarmField
+    identifiers = [task.id for task in tasks]
+    if not identifiers:
+        return {}
+    links = AdvisoryTaskLink.query.join(FieldObservation).join(FarmField).filter(
+        AdvisoryTaskLink.task_id.in_(identifiers), AdvisoryTaskLink.farmer_id == current_user.id,
+        FieldObservation.farmer_id == current_user.id, FarmField.farmer_id == current_user.id,
+    ).options(joinedload(AdvisoryTaskLink.observation).joinedload(FieldObservation.field)).all()
+    latest = latest_report_keys(current_user.id, list({link.observation.field_id for link in links}))
+    result = {}
+    for link in links:
+        row = link.observation
+        priority = next((item for item in row.report_data.get('priorities', [])
+                         if item.get('code') == link.action_code), {})
+        localized = priority.get('localized', {})
+        recorded_at = row.created_at
+        if recorded_at.tzinfo is None:
+            recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+        result[link.task_id] = {
+            'report_id': row.id, 'field_id': row.field_id,
+            'latest_report_id': latest[row.field_id][1] if row.field_id in latest else row.id,
+            'stale': report_is_stale(row, today, latest.get(row.field_id)),
+            'archived': row.field.archived, 'date': recorded_at.astimezone(ZoneInfo('Asia/Kolkata')).date(),
+            'titles': {language: localized.get(language, {}).get('title') or priority.get('title', '')
+                       for language in ('en', 'hi', 'mr')},
+            'actions': {language: localized.get(language, {}).get('action') or priority.get('action', '')
+                        for language in ('en', 'hi', 'mr')},
+        }
+    return result
+
+
 def _render(error=None, form_kind=None, values=None, status=200):
     today = _today()
     month = request.args.get('month', today.strftime('%Y-%m'))
@@ -112,6 +147,8 @@ def _render(error=None, form_kind=None, values=None, status=200):
     ledger_pages = max(1, (entry_count + 99) // 100)
     task_page = min(_page_number('tasks_page'), task_pages)
     ledger_page = min(_page_number('ledger_page'), ledger_pages)
+    visible_tasks = tasks.offset((task_page - 1) * 100).limit(100).all()
+    task_advice = _advisory_task_context(visible_tasks, today)
 
     def page_url(*, task=task_page, ledger=ledger_page, anchor):
         return url_for('farm_tools.index', month=month, tasks_page=task,
@@ -119,7 +156,7 @@ def _render(error=None, form_kind=None, values=None, status=200):
 
     return render_template(
         'farm_tools/index.html', today=today, month=month,
-        tasks=tasks.offset((task_page - 1) * 100).limit(100).all(), task_count=task_count,
+        tasks=visible_tasks, task_count=task_count, task_advice=task_advice,
         entries=entries.offset((ledger_page - 1) * 100).limit(100).all(), entry_count=entry_count,
         task_page=task_page, task_pages=task_pages, ledger_page=ledger_page, ledger_pages=ledger_pages,
         task_previous=page_url(task=task_page - 1, anchor='farm-tasks') if task_page > 1 else None,

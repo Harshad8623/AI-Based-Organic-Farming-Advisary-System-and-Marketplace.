@@ -1,11 +1,17 @@
-# Dharti Rakshak — Organic Farming & Local Marketplace
+# Dharti Rakshak — Field Advisory, Farm Records & Local Marketplace
 
-A Flask application for farmers and buyers, with simple English, Hindi and Marathi controls. The project was previously called KrishiAI.
+A Flask application for farmers and buyers, with simple English, Hindi and Marathi controls. The main workflow is now field-based: record actual conditions, get explained next steps, save work and record the result. The project was previously called KrishiAI.
 
 **Made by Harshad Madhav Dhuppe · PRN 23025331844046 · CSMSS Chh. Shahu College of Engineering Sambhajinagar · Electronics and Computer Engineering.**
 
 ## Features
 
+- **My farm:** private field profiles, short observation forms, root-zone moisture, standing water, symptoms, plant counts and measured rain. Saved plans explain priorities, evidence, missing information and next checks.
+- **Local advisory intelligence:** an expert system for context-dependent checks, plus multilingual TF-IDF/cosine matching against the farmer's own previous cases. It works without Gemini; it makes no disease, yield or field-accuracy claim.
+- **Outcome history:** previous input/report snapshots, farmer-reported results, repeat-safe action tasks and clear review warnings when advice becomes old or is superseded.
+- **Before you spend or sell:** compare pickup versus market-trip amounts after costs and spoilage, break-even prices and lower-yield/price scenarios; explicitly use your monthly diary costs if appropriate.
+- **Water arithmetic:** acre/hectare/guntha conversion, entered-depth volume, efficiency and pump duration, without prescribing irrigation doses.
+- **Simple phone workflow:** three homepage actions, four bottom tabs, smaller green-and-white pages, temporary observation drafts and printable multilingual plans.
 - Farmer and buyer accounts with hashed passwords, role checks, CSRF protection, and secure production cookie settings.
 - Marketplace listings with verified image uploads, explicit stock units, search, filters, sorting and farmer profiles.
 - Cart and cash-on-delivery orders with stock checks, repeat-submission protection, controlled order transitions, delivery tracking and buyer ratings.
@@ -47,7 +53,7 @@ venv/bin/python -m pip check
 
 Tests use isolated temporary databases and cover account/role access, CSRF, finite input validation, stock/payment replay protection, order receipts and transitions, ledger arithmetic, ownership, CSV safety, translation failures, malformed provider responses and real demonstration-model training. Gateway responses are mocked; tests do not move money.
 
-The browser check creates its own temporary database and accounts, with real CSRF enabled. It checks 320/390/1440-pixel pages, language persistence, task/diary/CSV actions, safe chat and failed-message recovery, and an order from checkout through delivery and rating.
+The browser check creates its own temporary database and accounts, with real CSRF enabled. It checks 320/390/1440-pixel pages, language persistence, field creation and observations, local case retrieval, draft recovery, action tasks, outcomes and printable reports, selling/water calculations, task/diary/CSV actions, safe chat recovery, and an order from checkout through delivery and rating.
 
 ```bash
 venv/bin/python -m pip install -r requirements-browser.txt
@@ -80,6 +86,8 @@ Required HTTPS destinations for enabled integrations are `generativelanguage.goo
 
 Read [deployment and release notes](docs/DEPLOYMENT.md) before enabling live users or payments. Set `APP_ENV=production`, supply a strong stable `SECRET_KEY`, terminate HTTPS correctly and use persistent database/upload storage. Production mode uses secure cookies and refuses to start without an environment-provided session key.
 
-Existing table columns are preserved. Planner, checkout-attempt and order-receipt tables are additive and created during initialization. Back up the database and uploads before upgrading any deployment. Legacy orders cannot recover a historical name/unit that was never recorded; their fallback remains explicit.
+Existing table columns are preserved. Planner, checkout-attempt, order-receipt and field-advisory tables are additive and created during initialization. Back up the database and uploads before upgrading any deployment. Legacy orders cannot recover a historical name/unit that was never recorded; their fallback remains explicit.
 
 [Dependency audit](docs/DEPENDENCY_AUDIT.md) documents the pinned security updates and their sources. Live weather, AI, trained image-model accuracy and merchant payment behavior require separate validation with configured services. No software test suite establishes an absolute “zero bugs” guarantee.
+
+Read [how the advisory and local ML work](docs/ADVISORY_DESIGN.md) for the input-to-action logic, learning limits and calculations.

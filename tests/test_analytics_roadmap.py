@@ -78,3 +78,31 @@ def test_malformed_roadmap_stages_are_safe(app, client):
         db.session.commit()
     for index in range(len(payloads)):
         assert client.get(f'/roadmap/test-{index}').status_code == 200
+
+
+def test_guides_filter_on_server_and_preserve_offline_core_content(app, client):
+    with app.app_context():
+        seed_roadmaps()
+    response = client.get('/roadmap/?season=Rabi')
+    assert response.status_code == 200
+    assert b'/roadmap/wheat' in response.data
+    # Tomato is seeded as Kharif and must not be returned for Rabi.
+    assert b'/roadmap/tomato' not in response.data
+    assert b'method="get"' in response.data
+    assert client.get('/roadmap/?season=unknown').status_code == 400
+    response = client.get('/roadmap/tomato')
+    assert b'Use a recent soil test and local advice' in response.data
+    assert b'original_reference' in response.data
+    assert b'js/guides-i18n.js' in response.data
+    # Public background guides do not depend on the authenticated translation API.
+    assert b'data-translate' not in response.data
+
+
+def test_guide_ignores_malformed_timing_values(app, client):
+    with app.app_context():
+        db.session.add(CropRoadmap(crop_name='Custom',slug='bad-days',stages_json='[{"stage":"Observe","days":{"fake":"unsafe timing"},"actions":["Count plants"]}]'))
+        db.session.commit()
+    response = client.get('/roadmap/bad-days')
+    assert response.status_code == 200
+    assert b'Count plants' in response.data
+    assert b'unsafe timing' not in response.data

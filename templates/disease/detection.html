@@ -4,6 +4,11 @@
 <div class="container">
   <h1 class="h2 fw-bold text-success" data-i18n="leaf_heading">Leaf health check</h1>
   <p class="text-muted" data-i18n="leaf_intro">A photo can help you describe a problem. Image analysis is a starting point, not a confirmed diagnosis.</p>
+  <section class="card card-body mb-4">
+    <h2 class="h5" data-i18n="leaf_scout_first">Count affected plants and record field conditions</h2>
+    <p class="text-muted" data-i18n="leaf_scout_note">Yellowing, spots and wilting have several possible causes. Record how many plants are affected, soil moisture and recent rain to decide what to check next.</p>
+    <a href="{{ url_for('farm_advisory.index') }}" class="btn btn-success align-self-start" data-i18n="leaf_open_scout">Record a field observation</a>
+  </section>
   <div class="row g-4">
     <div class="col-lg-5">
       <section class="card card-body">

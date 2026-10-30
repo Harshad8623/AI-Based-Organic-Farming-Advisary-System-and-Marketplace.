@@ -2,8 +2,15 @@
 {% block title %}Crop explorer — KrishiAI{% endblock %}
 {% block content %}
 <div class="container">
-  <h1 class="h2 fw-bold text-success" data-i18n="crop_explorer_title">Crop explorer</h1>
-  <p class="text-muted" data-i18n="crop_explorer_intro">Explore how a demonstration model groups 22 crops using example conditions.</p>
+  <h1 class="h2 fw-bold text-success" data-i18n="crop_planning_title">Plan your crop decisions</h1>
+  <p class="text-muted" data-i18n="crop_planning_intro">Start with your field, available water, planting stage and costs.</p>
+  <div class="row g-3 mb-4">
+    <div class="col-md-6"><section class="card card-body h-100"><h2 class="h5" data-i18n="crop_field_title">Use your field observations</h2><p class="text-muted" data-i18n="crop_field_note">Keep crop conditions and follow-up results together. Get a checklist with reasons and the information still needed.</p><a class="btn btn-success mt-auto" href="{{ url_for('farm_advisory.index') }}" data-i18n="tools_open_my_farm">Open my farm</a></section></div>
+    <div class="col-md-6"><section class="card card-body h-100"><h2 class="h5" data-i18n="crop_cost_title">Check costs before planting</h2><p class="text-muted" data-i18n="crop_cost_note">Compare expected harvest, growing costs and delivery charges. Calculate the price needed to cover your costs.</p><a class="btn btn-outline-success mt-auto" href="{{ url_for('farm_decisions.index') }}" data-i18n="crop_open_decisions">Compare costs and selling options</a></section></div>
+  </div>
+  <details class="card card-body" id="crop-demo" {% if prediction or crop_error %}open{% endif %}>
+  <summary class="fw-semibold py-2" data-i18n="crop_demo_open">Optional: try the synthetic learning model</summary>
+  <p class="text-muted mt-3" data-i18n="crop_explorer_intro">Explore how a demonstration model groups 22 crops using example conditions.</p>
   <div class="alert alert-warning" role="note">
     <strong data-i18n="crop_demo_badge">Learning tool — synthetic data</strong>
     <p class="mb-0 mt-1" data-i18n="crop_demo_warning">This model was trained on generated examples, not verified field trials. Its output is not a planting recommendation, yield forecast, or fertilizer prescription. Confirm crop suitability with a local agricultural expert.</p>
@@ -52,5 +59,6 @@
       </section>
     </div>
   </div>
+  </details>
 </div>
 {% endblock %}

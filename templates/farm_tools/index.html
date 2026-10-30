@@ -58,21 +58,36 @@
         {% if tasks %}
         <ul class="list-unstyled mb-0 d-grid gap-3">
           {% for task in tasks %}
+          {% set advice = task_advice.get(task.id) %}
+          {% set needs_review = advice and advice.stale and not task.is_done %}
           <li class="card"><div class="card-body d-flex justify-content-between align-items-start gap-3 flex-wrap">
             <div class="flex-grow-1" style="min-width:0;overflow-wrap:anywhere;">
-              <h3 class="h6 mb-1 {{ 'text-decoration-line-through text-muted' if task.is_done else '' }}">{{ task.title }}</h3>
+              <h3 class="h6 mb-1 {{ 'text-decoration-line-through text-muted' if task.is_done else '' }}"{% if advice and advice.titles.en %} data-farm-localized="{{ advice.titles|tojson|forceescape }}"{% endif %}>{{ advice.titles.en if advice and advice.titles.en else task.title }}</h3>
               {% if task.crop %}<p class="small text-muted mb-2">{{ task.crop }}</p>{% endif %}
               <time datetime="{{ task.due_date.isoformat() }}" class="small">{{ task.due_date.strftime('%d %b %Y') }}</time>
               {% if task.is_done %}<span class="badge bg-success ms-2" data-i18n="farm_done">Done</span>
               {% elif task.due_date < today %}<span class="badge bg-danger ms-2" data-i18n="farm_overdue">Overdue</span>
               {% elif task.due_date == today %}<span class="badge bg-warning text-dark ms-2" data-i18n="farm_today">Today</span>{% endif %}
+              {% if advice %}
+              <p class="small mt-2 mb-2"><a href="{{ url_for('farm_advisory.report', observation_id=advice.report_id) }}" data-i18n="farm_advice_source">Saved field check</a> · <time datetime="{{ advice.date.isoformat() }}">{{ advice.date.strftime('%d %b %Y') }}</time></p>
+              {% if needs_review %}
+              <div class="alert alert-warning p-3 mb-2" role="status" data-advice-review-required>
+                <strong class="d-block" data-i18n="farm_advice_review_title">Review needed before acting</strong>
+                <p class="small mb-2" data-i18n="farm_advice_review_note">This task came from a field check that needs review. Check current field conditions before using the saved instructions.</p>
+                {% if advice.archived %}<a class="btn btn-outline-success btn-sm" href="{{ url_for('farm_advisory.field_detail', field_id=advice.field_id) }}" data-i18n="farm_advice_field_history">Open field history</a>
+                {% elif advice.latest_report_id != advice.report_id %}<a class="btn btn-success btn-sm" href="{{ url_for('farm_advisory.report', observation_id=advice.latest_report_id) }}" data-i18n="farm_advice_latest">Review latest plan</a>
+                {% else %}<a class="btn btn-success btn-sm" href="{{ url_for('farm_advisory.field_detail', field_id=advice.field_id) }}" data-i18n="farm_advice_new_check">Record a fresh field check</a>{% endif %}
+              </div>
+              {% endif %}
+              <details class="small mb-2"><summary class="py-1" data-i18n="farm_advice_saved_instructions">Read the saved instructions</summary><p class="mt-2 mb-1" data-farm-localized="{{ advice.actions|tojson|forceescape }}">{{ advice.actions.en }}</p></details>
+              {% endif %}
             </div>
             <div class="d-flex gap-2 flex-wrap">
               <form action="{{ url_for('farm_tools.task_status', task_id=task.id) }}" method="post">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="month" value="{{ month }}">
                 <input type="hidden" name="is_done" value="{{ '0' if task.is_done else '1' }}">
-                <button class="btn btn-outline-success btn-sm" type="submit" data-i18n="{{ 'farm_reopen' if task.is_done else 'farm_mark_done' }}">{{ 'Reopen' if task.is_done else 'Mark done' }}</button>
+                <button class="btn {{ 'btn-outline-secondary' if needs_review else 'btn-outline-success' }} btn-sm" type="submit" data-i18n="{{ 'farm_reopen' if task.is_done else 'farm_advice_already_done' if needs_review else 'farm_mark_done' }}">{{ 'Reopen' if task.is_done else 'I already did this' if needs_review else 'Mark done' }}</button>
               </form>
               <form action="{{ url_for('farm_tools.delete_task', task_id=task.id) }}" method="post" data-farm-confirm="farm_delete_task_confirm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

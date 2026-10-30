@@ -11,7 +11,7 @@
       <button class="btn btn-success" type="submit" data-i18n="weather_check">Check weather</button>
     </div>
   </form>
-  {% if weather_error %}<div class="alert alert-warning" role="status" data-i18n="{{ weather_error }}">Weather is unavailable. Try again later.</div>{% endif %}
+  {% if weather_error %}<div class="alert alert-warning" role="status"><span data-i18n="{{ weather_error }}">Weather is unavailable. Try again later.</span>{% if weather_detail %}<p class="mb-0 mt-2" data-i18n="{{ weather_detail }}">Please check the location and observation time.</p>{% endif %}</div>{% endif %}
   {% if weather %}
   <div class="row g-4">
     <div class="col-lg-5">
@@ -23,7 +23,7 @@
         <dl class="row mb-3">
           <dt class="col-7" data-i18n="weather_humidity">Humidity</dt><dd class="col-5">{{ weather.humidity|int }}%</dd>
           <dt class="col-7" data-i18n="weather_wind">Wind</dt><dd class="col-5">{{ weather.wind_speed }} m/s</dd>
-          <dt class="col-7" data-i18n="weather_rain_hour">Rain in the last hour</dt><dd class="col-5">{{ weather.rain_mm }} mm</dd>
+          <dt class="col-7" data-i18n="weather_rain_hour">Rain in the last hour</dt><dd class="col-5">{% if weather.rain_mm is not none %}{{ weather.rain_mm }} mm{% else %}<span data-i18n="weather_not_reported">Not reported</span>{% endif %}</dd>
         </dl>
         <p class="small text-muted mb-1"><span data-i18n="advice_source">Source</span>: {{ weather.source }}</p>
         <p class="small text-muted mb-0"><span data-i18n="weather_observed_at">Observed at</span>: <time datetime="{{ weather.observed_at }}">{{ weather.observed_label }}</time></p>
@@ -44,5 +44,10 @@
     <p class="text-muted mb-0" data-i18n="weather_offline_help">Use your local IMD forecast and check soil moisture in the field before making a farming decision.</p>
   </div>
   {% endif %}
+  <section class="card card-body mt-4">
+    <h2 class="h5" data-i18n="weather_record_conditions">What is happening in your field?</h2>
+    <p class="text-muted" data-i18n="weather_record_note">Nearby weather cannot measure your soil. Record moisture, standing water and symptoms to get a field-specific checklist.</p>
+    <a href="{{ url_for('farm_advisory.index') }}" class="btn btn-success align-self-start" data-i18n="tools_open_my_farm">Open my farm</a>
+  </section>
 </div>
 {% endblock %}

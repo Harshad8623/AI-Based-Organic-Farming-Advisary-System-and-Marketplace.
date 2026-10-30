@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Farm calculations — Dharti Rakshak{% endblock %}
+{% macro number_input(name, key, minimum='0', maximum='999999999.99', step='0.01', required=true) %}
+<label for="decision-{{ name }}" class="form-label" data-i18n="{{ key }}">{{ labels.get(key, key) }}</label>
+<input id="decision-{{ name }}" name="{{ name }}" class="form-control" type="number" inputmode="decimal" min="{{ minimum }}" max="{{ maximum }}" step="{{ step }}" value="{{ values.get(name, '') }}" {{ 'required' if required else '' }}>
+{% endmacro %}
+{% macro weight_select(name) %}
+<select name="{{ name }}" id="decision-{{ name }}" class="form-select" aria-label="Weight unit" data-i18n-aria="decision_weight_unit">
+  <option value="kg" {{ 'selected' if values.get(name, 'kg') == 'kg' }} data-i18n="decision_kg">kg</option>
+  <option value="quintal" {{ 'selected' if values.get(name) == 'quintal' }} data-i18n="decision_quintal">quintal (100 kg)</option>
+</select>
+{% endmacro %}
+{% block content %}
+<div class="container py-3" style="max-width:1000px">
+  <header class="mb-4">
+    <h1 class="h3 mb-2" data-i18n="decision_title">Before you spend or sell</h1>
+    <p class="text-muted mb-3" data-i18n="decision_intro">Use your own quantities, costs and quotes to compare options. These are calculations, not price or harvest forecasts.</p>
+    <nav class="d-flex flex-wrap gap-2" aria-label="Calculations" data-i18n-aria="decision_navigation">
+      <a class="btn btn-success" href="#sales" data-i18n="decision_sales_tab">Compare selling options</a>
+      <a class="btn btn-outline-success" href="#water" data-i18n="decision_water_tab">Calculate a water volume</a>
+      <a class="btn btn-outline-secondary" href="{{ url_for('farm_tools.index') }}#farm-ledger" data-i18n="decision_money_diary">My money diary</a>
+    </nav>
+  </header>
+  {% if error %}<div class="alert alert-danger" role="alert" tabindex="-1" id="decision-error"><span data-i18n="{{ error }}">Check the values shown below.</span></div>{% endif %}
+  <section id="sales" class="mb-5" aria-labelledby="sales-title">
+    <div class="mb-3">
+      <h2 class="h4" id="sales-title" data-i18n="decision_sales_title">Farm pickup or a trip to market?</h2>
+      <p class="text-muted mb-0" data-i18n="decision_sales_intro">A higher market price can leave less money after transport, fees and unsold produce.</p>
+    </div>
+    <form method="post" action="{{ url_for('farm_decisions.index') }}#sales" class="card card-body mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="calculator" value="sales">
+      <fieldset class="mb-4">
+        <legend class="h6" data-i18n="decision_produce_cost">1. Quantity and growing cost</legend>
+        <div class="row g-3">
+          <div class="col-7 col-md-4">{{ number_input('harvest_quantity', 'decision_harvest', '0.0001', '10000000', '0.0001') }}</div>
+          <div class="col-5 col-md-3"><label for="decision-harvest_unit" class="form-label" data-i18n="decision_weight_unit">Unit</label>{{ weight_select('harvest_unit') }}</div>
+          <div class="col-md-5"><label for="decision-cost_source" class="form-label" data-i18n="decision_cost_source">Growing cost comes from</label><select id="decision-cost_source" class="form-select" name="cost_source"><option value="manual" {{ 'selected' if values.get('cost_source') == 'manual' }} data-i18n="decision_manual_cost">An amount I enter</option><option value="ledger" {{ 'selected' if values.get('cost_source') == 'ledger' }} data-i18n="decision_ledger_cost">My diary for one month</option></select></div>
+          <div class="col-md-6" data-decision-cost="manual">{{ number_input('cultivation_cost', 'decision_growing_cost', required=false) }}<p class="form-text" data-i18n="decision_cost_help">Include seeds, inputs, labour, rent and other costs you want to recover.</p></div>
+          <div class="col-md-6" data-decision-cost="ledger"><label for="decision-ledger_month" class="form-label" data-i18n="decision_month">Diary month</label><input id="decision-ledger_month" class="form-control" type="month" name="ledger_month" min="1900-01" max="2100-12" value="{{ values.get('ledger_month', '') }}"><p class="form-text" data-i18n="decision_ledger_help">Uses all your expense records for this month. Check that they belong to this harvest; they are not automatically crop-specific.</p></div>
+        </div>
+      </fieldset>
+      <fieldset class="mb-4">
+        <legend class="h6" data-i18n="decision_quotes">2. Your two price quotes</legend>
+        <div class="row g-3">
+          <div class="col-md-6"><div class="row g-2"><div class="col-7">{{ number_input('farmgate_price', 'decision_farmgate_price', '0.01') }}</div><div class="col-5"><label for="decision-farmgate_price_unit" class="form-label" data-i18n="decision_price_per">Price per</label>{{ weight_select('farmgate_price_unit') }}</div></div><p class="form-text" data-i18n="decision_pickup_help">Farm pickup assumes the buyer collects everything and you pay no delivery charge.</p></div>
+          <div class="col-md-6"><div class="row g-2"><div class="col-7">{{ number_input('market_price', 'decision_market_price', '0.01') }}</div><div class="col-5"><label for="decision-market_price_unit" class="form-label" data-i18n="decision_price_per">Price per</label>{{ weight_select('market_price_unit') }}</div></div><p class="form-text" data-i18n="decision_quote_help">Enter a quote you checked yourself. Grade and payment terms can change the amount received.</p></div>
+        </div>
+      </fieldset>
+      <fieldset class="mb-3">
+        <legend class="h6" data-i18n="decision_market_costs">3. Extra costs of selling at market</legend>
+        <div class="row g-3">
+          <div class="col-md-4">{{ number_input('transport_cost', 'decision_transport') }}</div>
+          <div class="col-md-4">{{ number_input('market_fees', 'decision_fees') }}</div>
+          <div class="col-md-4">{{ number_input('spoilage_percent', 'decision_loss_percent', '0', '99.99') }}</div>
+        </div>
+        <p class="form-text mt-2" data-i18n="decision_loss_help">Loss means the share of this harvest you expect to remain unsold or damaged at market. Transport and fees apply once to the entire trip.</p>
+      </fieldset>
+      <button class="btn btn-success align-self-start" type="submit" data-i18n="decision_compare">Compare my options</button>
+    </form>
+    {% if sales %}
+    <div id="sales-result" tabindex="-1" class="card card-body border-success" aria-live="polite">
+      <h3 class="h5" data-i18n="decision_result">Your calculation</h3>
+      <p class="small text-muted" data-i18n="decision_estimate_notice">An estimate from your inputs. Actual harvest, buyer payment, quality and costs can differ. This calculation does not save income in your diary.</p>
+      {% if sales.cost_source == 'ledger' %}<p class="small"><span data-i18n="decision_used_diary">Cost taken from your selected month's expense records</span>: <strong>{{ sales.ledger_month }} · {{ sales.ledger_count }} · ₹{{ display(sales.cost) }}</strong></p>{% endif %}
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><div class="p-3 border rounded h-100"><h4 class="h6" data-i18n="decision_pickup">Buyer collects at farm</h4><p class="small mb-1"><span data-i18n="decision_gross">Sales value</span>: ₹{{ display(sales.farmgate_gross) }}</p><p class="small mb-1"><span data-i18n="decision_less_growing_cost">Growing cost subtracted</span>: ₹{{ display(sales.cost) }}</p><p class="mb-0"><span data-i18n="decision_net">Estimated amount left</span><strong class="d-block fs-4 {{ 'text-danger' if sales.farmgate_net < 0 else 'text-success' }}">₹{{ display(sales.farmgate_net) }}</strong></p></div></div>
+        <div class="col-md-6"><div class="p-3 border rounded h-100"><h4 class="h6" data-i18n="decision_market_trip">You take it to market</h4><p class="small mb-1"><span data-i18n="decision_sellable">Saleable quantity</span>: {{ display(sales.saleable_kg) }} kg</p><p class="small mb-1"><span data-i18n="decision_gross">Sales value</span>: ₹{{ display(sales.market_gross) }}</p><p class="small mb-1"><span data-i18n="decision_trip_total">Transport + fees</span>: ₹{{ display(sales.transport + sales.fees) }}</p><p class="small mb-1"><span data-i18n="decision_less_growing_cost">Growing cost subtracted</span>: ₹{{ display(sales.cost) }}</p><p class="mb-0"><span data-i18n="decision_net">Estimated amount left</span><strong class="d-block fs-4 {{ 'text-danger' if sales.market_net < 0 else 'text-success' }}">₹{{ display(sales.market_net) }}</strong></p></div></div>
+      </div>
+      <p class="mb-2"><strong data-i18n="{{ sales.better_key }}">Compare the amounts above.</strong> <span data-i18n="decision_difference">Difference</span>: ₹{{ display(sales.difference.copy_abs()) }}</p>
+      <p class="small text-muted" data-i18n="decision_choice_note">Also check the buyer's reliability, grade deductions, time, and when you will receive payment before deciding.</p>
+      <div class="table-responsive"><table class="table table-sm align-middle"><caption data-i18n="decision_break_even_caption">Minimum selling price to cover the costs you included</caption><thead><tr><th scope="col" data-i18n="decision_option">Option</th><th scope="col" data-i18n="decision_break_even_kg">Break-even ₹/kg</th><th scope="col" data-i18n="decision_break_even_quintal">Break-even ₹/quintal</th><th scope="col" data-i18n="decision_effective_kg">Amount left per harvested kg</th></tr></thead><tbody><tr><th scope="row" data-i18n="decision_pickup">Farm pickup</th><td>{{ display(sales.farmgate_break_even_kg) }}</td><td>{{ display(sales.farmgate_break_even_quintal) }}</td><td>₹{{ display(sales.farmgate_effective_kg) }}</td></tr><tr><th scope="row" data-i18n="decision_market_trip">Market trip</th><td>{{ display(sales.market_break_even_kg) }}</td><td>{{ display(sales.market_break_even_quintal) }}</td><td>₹{{ display(sales.market_effective_kg) }}</td></tr></tbody></table></div>
+      <details class="mt-2"><summary class="fw-semibold py-2" data-i18n="decision_sensitivity">What if harvest or prices are lower?</summary><p class="small text-muted" data-i18n="decision_sensitivity_note">These are stress tests, not forecasts. Growing cost, transport, fees and the loss percentage stay fixed. The price scenario reduces both quotes by 20%.</p><div class="table-responsive"><table class="table table-sm"><thead><tr><th data-i18n="decision_scenario">Scenario</th><th data-i18n="decision_pickup">Farm pickup</th><th data-i18n="decision_market_trip">Market trip</th></tr></thead><tbody>{% for row in sales.scenarios %}<tr><th scope="row" data-i18n="{{ row.label_key }}">{{ row.label }}</th><td>₹{{ display(row.farmgate_net) }}</td><td>₹{{ display(row.market_net) }}</td></tr>{% endfor %}</tbody></table></div></details>
+    </div>
+    {% endif %}
+  </section>
+  <section id="water" aria-labelledby="water-title" class="mb-4">
+    <h2 class="h4" id="water-title" data-i18n="decision_water_title">How much water does a chosen depth mean?</h2>
+    <p class="text-muted" data-i18n="decision_water_intro">Convert your field area and a depth you already decided into litres. This tool does not decide whether irrigation is needed.</p>
+    <form method="post" action="{{ url_for('farm_decisions.index') }}#water" class="card card-body mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="calculator" value="water">
+      <div class="row g-3">
+        <div class="col-7 col-md-4">{{ number_input('area_value', 'decision_area', '0.0001', '100000000', '0.0001') }}</div>
+        <div class="col-5 col-md-3"><label class="form-label" for="decision-area_unit" data-i18n="decision_area_unit">Area unit</label><select id="decision-area_unit" name="area_unit" class="form-select">{% for unit, key, label in [('m2','decision_m2','m²'),('acre','decision_acre','acre'),('hectare','decision_hectare','hectare'),('guntha','decision_guntha','guntha')] %}<option value="{{ unit }}" {{ 'selected' if values.get('area_unit') == unit }} data-i18n="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
+        <div class="col-md-5">{{ number_input('depth_mm', 'decision_depth', '0.01', '500') }}</div>
+        <div class="col-md-6">{{ number_input('efficiency_percent', 'decision_efficiency', '0.01', '100') }}<p class="form-text" data-i18n="decision_efficiency_help">Your estimate of the percentage reaching the field. Do not assume 100% if delivery loses water.</p></div>
+        <div class="col-md-6">{{ number_input('pump_lpm', 'decision_pump', '0.01', '1000000', required=false) }}<p class="form-text" data-i18n="decision_pump_help">Optional measured flow at this operating condition. Actual flow and efficiency can change.</p></div>
+      </div>
+      <p class="small text-muted mt-2" data-i18n="decision_area_note">Conversions: 1 acre = 4,046.8564224 m²; 1 hectare = 10,000 m²; 40 guntha = 1 acre.</p>
+      <button type="submit" class="btn btn-success align-self-start" data-i18n="decision_calculate_water">Calculate volume</button>
+    </form>
+    {% if water %}<div id="water-result" tabindex="-1" class="card card-body border-success" aria-live="polite"><h3 class="h5" data-i18n="decision_water_result">Water calculation</h3><dl class="row mb-2"><dt class="col-7" data-i18n="decision_converted_area">Converted area</dt><dd class="col-5">{{ display(water.area_m2) }} m²</dd><dt class="col-7" data-i18n="decision_net_water">Volume at the field</dt><dd class="col-5">{{ display(water.net_litres) }} L</dd><dt class="col-7" data-i18n="decision_gross_water">Water to supply at your efficiency</dt><dd class="col-5">{{ display(water.gross_litres) }} L</dd>{% if water.pump_minutes is not none %}<dt class="col-7" data-i18n="decision_pump_time">Calculated pump duration</dt><dd class="col-5">{{ display(water.pump_minutes) }} <span data-i18n="decision_minutes">minutes</span> ({{ display(water.pump_hours) }} h)</dd>{% endif %}</dl><p class="small mb-2" data-i18n="decision_water_formula">Litres at the field = area in m² × depth in mm. Supply litres = field litres ÷ (efficiency ÷ 100). Pump minutes = supply litres ÷ measured litres per minute.</p><p class="small text-muted mb-0" data-i18n="decision_water_caution">This arithmetic is not a watering prescription. Decide the required depth from root-zone moisture, crop stage, actual rain and qualified local advice. Stop if runoff or waterlogging occurs.</p></div>{% endif %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/decisions-i18n.js') }}"></script>{% endblock %}

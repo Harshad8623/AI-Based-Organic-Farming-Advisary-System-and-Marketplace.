@@ -6,6 +6,10 @@ Supports two roles: 'farmer' and 'buyer'.
 """
 
 import re
+import calendar
+from datetime import datetime, date
+from decimal import Decimal
+from zoneinfo import ZoneInfo
 from urllib.parse import urlsplit
 from sqlalchemy.exc import IntegrityError
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session
@@ -180,12 +184,29 @@ def farmer_dashboard():
         db.func.sum(Order.total_price)
     ).filter_by(farmer_id=current_user.id, status='delivered').scalar() or 0
     roadmap_count = CropRoadmap.query.count()
+    from advisory_models import FarmField
+    from farm_tools_models import FarmTask, FarmLedgerEntry
+    today = datetime.now(ZoneInfo('Asia/Kolkata')).date()
+    first_day = today.replace(day=1)
+    last_day = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+    tasks = FarmTask.query.filter_by(farmer_id=current_user.id, is_done=False)
+    money = {'income': Decimal('0.00'), 'expense': Decimal('0.00')}
+    for kind, amount in db.session.query(FarmLedgerEntry.kind, FarmLedgerEntry.amount).filter(
+            FarmLedgerEntry.farmer_id == current_user.id,
+            FarmLedgerEntry.entry_date >= first_day, FarmLedgerEntry.entry_date <= last_day).yield_per(100):
+        money[kind] += amount
+    farm_stats = {
+        'fields_count': FarmField.query.filter_by(farmer_id=current_user.id, archived=False).count(),
+        'open_tasks': tasks.count(),
+        'overdue_tasks': tasks.filter(FarmTask.due_date < today).count(),
+        'monthly_income': money['income'], 'monthly_expenses': money['expense'],
+    }
     return render_template('farmer/dashboard.html',
                            products=products,
                            pending_orders=pending_orders,
                            total_orders=total_orders,
                            total_revenue=round(total_revenue, 2),
-                           roadmap_count=roadmap_count)
+                           roadmap_count=roadmap_count, farm_stats=farm_stats)
 
 
 @auth_bp.route('/buyer/dashboard')

@@ -178,3 +178,21 @@ app.recognitions[1].onerror({error: 'network'});
 assert.ok(app.status.textContent.includes('इंटरनेट तपासा'));
 assert.deepEqual(app.navigations, []);
 ''')
+
+
+def test_field_advice_and_selling_tools_are_localized_and_farmer_only():
+    run_voice_assertions(r'''
+const app = setup({lang: 'mr'});
+app.button.click(); app.recognitions[0].result('माझं शेत');
+assert.equal(app.navigations.at(-1), '/my-farm');
+app.button.click(); app.recognitions[1].result('विक्रीचा हिशेब');
+assert.equal(app.navigations.at(-1), '/farm-decisions');
+app.setLang('hi');
+app.button.click(); app.recognitions[2].result('आज की सलाह');
+assert.equal(app.navigations.at(-1), '/my-farm');
+const buyer = setup({role: 'buyer'});
+buyer.button.click(); buyer.recognitions[0].result('my farm');
+buyer.button.click(); buyer.recognitions[1].result('farm calculations');
+assert.equal(buyer.navigations.length, 0);
+assert.ok(buyer.status.textContent.includes('farmer accounts'));
+''')

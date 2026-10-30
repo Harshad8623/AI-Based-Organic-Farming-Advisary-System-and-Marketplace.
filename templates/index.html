@@ -1,51 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Dharti Rakshak — Grow better, together{% endblock %}
+{% block title %}Dharti Rakshak — Farm notebook{% endblock %}
 {% block content %}
-<div class="container">
-  <section class="home-hero" aria-labelledby="hero-title">
-    <div class="hero-copy">
-      <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span><span data-i18n="home_eyebrow">Rooted in better farming</span></p>
-      <h1 id="hero-title" data-i18n="home_hero_title">A little guidance.<br>A better growing season.</h1>
-      <p class="hero-description" data-i18n="home_hero_subtitle">Plan your farm, keep track of expenses, and connect directly with buyers. Simple tools for the work you do every day.</p>
-      <div class="hero-actions">
-        {% if current_user.is_authenticated %}
-        <a href="{{ url_for('auth.farmer_dashboard' if current_user.is_farmer() else 'auth.buyer_dashboard') }}" class="btn btn-success btn-lg"><span data-i18n="home_dashboard">Go to my dashboard</span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-        {% else %}
-        <a href="{{ url_for('auth.register') }}" class="btn btn-success btn-lg"><span data-i18n="home_get_started">Start your journey</span><i class="bi bi-arrow-up-right" aria-hidden="true"></i></a>
-        {% endif %}
-        <a href="{{ url_for('marketplace.listing') }}" class="btn btn-outline-success btn-lg" data-i18n="home_browse_market">Explore the market</a>
-      </div>
-      <p class="hero-language-note"><i class="bi bi-translate" aria-hidden="true"></i><span data-i18n="home_language_note">Your farm. Your language. English, हिंदी, मराठी.</span></p>
-    </div>
-    <div class="hero-art" aria-hidden="true">
-      <img src="{{ url_for('static', filename='images/farm-landscape.svg') }}" alt="" width="560" height="480">
-      <div class="hero-art-note"><span class="note-icon"><i class="bi bi-flower2"></i></span><div><strong data-i18n="home_art_title">Small steps. Strong roots.</strong><span data-i18n="home_art_subtitle">Make room for a healthier farm.</span></div></div>
-      <span class="landscape-label" data-i18n="home_art_label">Made for everyday farming</span>
-    </div>
+<div class="container app-home">
+  <header class="home-intro"><p class="eyebrow" data-i18n="app_daily_note">For today's farm work</p><h1 data-i18n="app_home_heading">What needs attention on your farm?</h1><p data-i18n="app_home_intro">Record what you see, understand the next step and keep track of what it costs.</p>{% if not current_user.is_authenticated %}<div class="d-flex gap-2 flex-wrap mt-3"><a class="btn btn-success" href="{{ url_for('auth.register') }}" data-i18n="app_start_free">Create my account</a><a class="btn btn-outline-success" href="{{ url_for('auth.login') }}" data-i18n="app_already_account">I already have an account</a></div>{% endif %}</header>
+  <section class="home-entry-list" aria-label="Main farm tools" data-i18n-aria="app_main_tools">
+    {% if not current_user.is_authenticated or current_user.is_farmer() %}
+    <a class="entry-row" href="{{ url_for('farm_advisory.index') }}"><span class="entry-number" aria-hidden="true">1</span><div><h2 data-i18n="app_field_entry">My fields & today's advice</h2><p data-i18n="app_field_entry_note">Add your crop and field conditions. See what to check first, why it matters and what information is missing.</p></div><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    <a class="entry-row" href="{{ url_for('farm_tools.index') }}"><span class="entry-number" aria-hidden="true">2</span><div><h2 data-i18n="app_money_entry">My work & farm accounts</h2><p data-i18n="app_money_entry_note">Save work with due dates. Record money received and spent, and review the month's total.</p></div><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    {% else %}
+    <a class="entry-row" href="{{ url_for('cart.view_cart') }}"><span class="entry-number" aria-hidden="true">1</span><div><h2 data-i18n="cart_heading">My cart</h2><p data-i18n="dash_cart_desc">Review your quantities and delivery details before checkout.</p></div><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    <a class="entry-row" href="{{ url_for('orders.buyer_orders') }}"><span class="entry-number" aria-hidden="true">2</span><div><h2 data-i18n="nav_my_orders">My orders</h2><p data-i18n="dash_buyer_orders_desc">Follow acceptance and delivery, and rate received produce.</p></div><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    {% endif %}
+    <a class="entry-row" href="{{ url_for('marketplace.listing') }}"><span class="entry-number" aria-hidden="true">3</span><div><h2 data-i18n="app_market_entry">Buy or sell farm produce</h2><p data-i18n="app_market_entry_note">Check the available quantity and price per unit. Agree on delivery and track the order.</p></div><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
   </section>
-
-  <div class="value-strip">
-    <span><i class="bi bi-journal-check" aria-hidden="true"></i><span data-i18n="home_value_plan">Plan your next step</span></span>
-    <span><i class="bi bi-wallet2" aria-hidden="true"></i><span data-i18n="home_value_money">Understand your farm costs</span></span>
-    <span><i class="bi bi-people" aria-hidden="true"></i><span data-i18n="home_value_sell">Connect with local buyers</span></span>
-  </div>
-
-  <section class="home-tools" aria-labelledby="tools-title">
-    <div class="section-heading"><div><p class="eyebrow" data-i18n="home_tools_eyebrow">Less searching. More growing.</p><h2 id="tools-title" data-i18n="home_features_title">What would you like to do?</h2></div><p data-i18n="home_tools_intro">Choose a task and take the next step.</p></div>
-    <div class="task-grid">
-      {% if not current_user.is_authenticated or current_user.is_farmer() %}
-      <a class="task-card task-card-featured" href="{{ url_for('farm_tools.index') }}"><span class="task-icon"><i class="bi bi-journal-check" aria-hidden="true"></i></span><span class="task-card-label" data-i18n="home_plan_tag">Your farm notebook</span><h3 data-i18n="home_plan_title">Plan work & track money</h3><p data-i18n="home_plan_desc">Keep tasks, due dates, income and expenses together. Know what needs attention next.</p><span class="task-link"><span data-i18n="home_plan_action">Open farm planner</span><i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-      {% endif %}
-      <a class="task-card" href="{{ url_for('marketplace.listing') }}"><span class="task-icon icon-peach"><i class="bi bi-basket2" aria-hidden="true"></i></span><h3 data-i18n="home_market_title">Buy & sell produce</h3><p data-i18n="home_market_desc">Browse local listings, compare prices, and manage your orders in one place.</p><span class="task-link"><span data-i18n="home_browse_market">Explore the market</span><i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-      <a class="task-card" href="{{ url_for('roadmap.index') }}"><span class="task-icon icon-yellow"><i class="bi bi-map" aria-hidden="true"></i></span><h3 data-i18n="home_guides_title">Find a growing guide</h3><p data-i18n="home_guides_desc">Read crop guides from soil preparation to harvest. Adapt each step to your local conditions.</p><span class="task-link"><span data-i18n="home_guides_action">Explore crop guides</span><i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-      <a class="task-card" href="{{ url_for('weather.advisory') }}"><span class="task-icon icon-blue"><i class="bi bi-cloud-sun" aria-hidden="true"></i></span><h3 data-i18n="home_weather_title">Check the weather</h3><p data-i18n="home_weather_desc">Look up available weather observations and general farming considerations for your area.</p><span class="task-link"><span data-i18n="home_weather_action">View weather</span><i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-      <a class="task-card" href="{{ url_for('crop.recommend') }}"><span class="task-icon"><i class="bi bi-flower2" aria-hidden="true"></i></span><h3 data-i18n="home_crop_title">Explore crop options</h3><p data-i18n="home_crop_desc">Use soil and climate inputs to explore experimental suggestions, then discuss them with a local expert.</p><span class="task-link"><span data-i18n="home_crop_action">Compare crop options</span><i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-      <a class="task-card" href="{{ url_for('disease.detect') }}"><span class="task-icon icon-peach"><i class="bi bi-search" aria-hidden="true"></i></span><h3 data-i18n="home_health_title">Understand plant health</h3><p data-i18n="home_health_desc">Review a leaf photo when analysis is available. Confirm suspected problems before treating crops.</p><span class="task-link"><span data-i18n="home_health_action">Open plant health</span><i class="bi bi-arrow-right" aria-hidden="true"></i></span></a>
-    </div>
-  </section>
-
-  <section class="help-banner"><div><p class="eyebrow" data-i18n="home_help_eyebrow">A helping hand</p><h2 data-i18n="home_help_title">Not sure where to start?</h2><p data-i18n="home_help_desc">Ask the farming assistant about soil care, composting, water conservation or using this platform.</p></div><a class="btn btn-success" href="{{ url_for('chatbot.chat') }}"><i class="bi bi-chat-dots" aria-hidden="true"></i><span data-i18n="home_help_action">Ask a question</span></a></section>
-
-  <section id="about" class="about-project" aria-labelledby="about-title"><div><p class="eyebrow" data-i18n="nav_about">About the project</p><h2 id="about-title" data-i18n="home_about_title">Built around the people who grow our food.</h2><p data-i18n="home_about_desc">Dharti Rakshak brings practical farm records, learning resources and a local marketplace together. Advisory tools support your decisions; local soil tests and qualified agricultural advice remain essential.</p></div><div class="about-credit"><span class="credit-label" data-i18n="home_created_by">Created by</span><strong>Harshad Madhav Dhuppe</strong><span>PRN 23025331844046</span><span>CSMSS Chh. Shahu College of Engineering Sambhajinagar</span><span>Electronics and Computer Engineering</span></div></section>
+  <section class="plain-section" aria-labelledby="how-it-works"><h2 id="how-it-works" data-i18n="app_how_heading">A useful record, every day</h2><ol class="work-steps"><li><strong data-i18n="app_step_observe">Look at the field</strong><span data-i18n="app_step_observe_note">Note soil moisture, rain and affected plants.</span></li><li><strong data-i18n="app_step_decide">Check the reasons</strong><span data-i18n="app_step_decide_note">Advice uses your entered conditions. Missing information is shown clearly.</span></li><li><strong data-i18n="app_step_record">Record the result</strong><span data-i18n="app_step_record_note">Save the work, its cost and whether the condition improved.</span></li></ol><p class="small text-muted mb-0" data-i18n="app_advice_scope">Field guidance supports your decisions. It does not confirm a disease or replace a local agricultural expert.</p></section>
+  <section id="about" class="plain-section about-project" aria-labelledby="about-title"><div><h2 id="about-title" data-i18n="app_about_heading">About this project</h2><p data-i18n="app_about_note">A farm notebook, explained decision support and a local marketplace. Available in English, Hindi and Marathi.</p><a href="{{ url_for('roadmap.index') }}" data-i18n="nav_crop_roadmaps">Crop guides</a></div><div class="about-credit"><strong>Harshad Madhav Dhuppe</strong><span>PRN 23025331844046</span><span>CSMSS Chh. Shahu College of Engineering Sambhajinagar</span><span>Electronics and Computer Engineering</span></div></section>
 </div>
 {% endblock %}

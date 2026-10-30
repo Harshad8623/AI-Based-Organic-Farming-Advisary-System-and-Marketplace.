@@ -208,3 +208,96 @@
 };
   Object.keys(strings).forEach(lang => Object.assign(TRANSLATIONS[lang], strings[lang]));
 })();
+
+/* Practical field workflows; these controls never require a translation API. */
+(() => {
+ const copy = {
+  "weather_not_reported": [
+    "Not reported",
+    "उपलब्ध नहीं",
+    "माहिती उपलब्ध नाही"
+  ],
+  "weather_city_not_found": [
+    "Town not found. Try a nearby town and country code, such as Pune,IN.",
+    "शहर नहीं मिला। पास का शहर और देश का कोड लिखें, जैसे Pune,IN।",
+    "शहर सापडले नाही. जवळचे शहर व देशाचा कोड लिहा, उदा. Pune,IN."
+  ],
+  "weather_stale_observation": [
+    "The provider returned an old observation. Check a current official forecast and try again later.",
+    "पुरानी मौसम जानकारी मिली है। नया आधिकारिक पूर्वानुमान देखें और बाद में कोशिश करें।",
+    "सेवेकडून जुनी हवामान नोंद मिळाली. अधिकृत ताजा अंदाज पाहा व नंतर पुन्हा प्रयत्न करा."
+  ],
+  "weather_record_conditions": [
+    "What is happening in your field?",
+    "आपके खेत में क्या हो रहा है?",
+    "तुमच्या शेतात काय दिसत आहे?"
+  ],
+  "weather_record_note": [
+    "Nearby weather cannot measure your soil. Record moisture, standing water and symptoms to get a field-specific checklist.",
+    "पास के मौसम से मिट्टी की नमी नहीं मापी जा सकती। खेत के लिए सूची पाने हेतु नमी, जमा पानी और लक्षण दर्ज करें।",
+    "जवळच्या हवामानावरून तुमच्या मातीतील ओलावा मोजता येत नाही. शेतासाठी तपासणी यादी मिळवण्यासाठी ओलावा, साचलेले पाणी व लक्षणे नोंदवा."
+  ],
+  "tools_open_my_farm": [
+    "Open my farm",
+    "मेरा खेत खोलें",
+    "माझं शेत उघडा"
+  ],
+  "leaf_scout_first": [
+    "Count affected plants and record field conditions",
+    "प्रभावित पौधे गिनें और खेत की स्थिति लिखें",
+    "बाधित झाडे मोजा व शेताची परिस्थिती नोंदवा"
+  ],
+  "leaf_scout_note": [
+    "Yellowing, spots and wilting have several possible causes. Record how many plants are affected, soil moisture and recent rain to decide what to check next.",
+    "पीलापन, धब्बे और मुरझाने के कई कारण हो सकते हैं। अगली जाँच तय करने के लिए प्रभावित पौधे, मिट्टी की नमी और हाल की बारिश दर्ज करें।",
+    "पिवळेपणा, ठिपके व कोमेजण्याची अनेक कारणे असू शकतात. पुढे काय तपासायचे हे ठरवण्यासाठी बाधित झाडांची संख्या, मातीचा ओलावा व अलीकडील पाऊस नोंदवा."
+  ],
+  "leaf_open_scout": [
+    "Record a field observation",
+    "खेत का निरीक्षण दर्ज करें",
+    "शेतातील पाहणी नोंदवा"
+  ],
+  "crop_planning_title": [
+    "Plan your crop decisions",
+    "फसल का निर्णय सोचकर लें",
+    "पिकाचा निर्णय माहितीवरून घ्या"
+  ],
+  "crop_planning_intro": [
+    "Start with your field, available water, planting stage and costs.",
+    "अपने खेत, उपलब्ध पानी, फसल की अवस्था और खर्च से शुरुआत करें।",
+    "तुमचे शेत, उपलब्ध पाणी, पिकाची अवस्था व खर्च यापासून सुरुवात करा."
+  ],
+  "crop_field_title": [
+    "Use your field observations",
+    "अपने खेत के निरीक्षण का उपयोग करें",
+    "शेतातील पाहणीचा उपयोग करा"
+  ],
+  "crop_field_note": [
+    "Keep crop conditions and follow-up results together. Get a checklist with reasons and the information still needed.",
+    "फसल की स्थिति और बाद के परिणाम साथ रखें। कारण और अधूरी जानकारी के साथ जाँच सूची पाएँ।",
+    "पिकाची स्थिती व नंतर दिसलेला परिणाम एकत्र ठेवा. कारणांसह तपासणी यादी व अजून हवी असलेली माहिती पाहा."
+  ],
+  "crop_cost_title": [
+    "Check costs before planting",
+    "बुवाई से पहले खर्च जाँचें",
+    "लागवडीपूर्वी खर्च तपासा"
+  ],
+  "crop_cost_note": [
+    "Compare expected harvest, growing costs and delivery charges. Calculate the price needed to cover your costs.",
+    "अनुमानित उपज, खेती का खर्च और ढुलाई की तुलना करें। खर्च निकलने के लिए ज़रूरी कीमत निकालें।",
+    "अपेक्षित शेतमाल, लागवडीचा खर्च व वाहतूक यांची तुलना करा. खर्च भरून निघण्यासाठी लागणारी किंमत काढा."
+  ],
+  "crop_open_decisions": [
+    "Compare costs and selling options",
+    "खर्च और बिक्री के विकल्पों की तुलना करें",
+    "खर्च व विक्रीच्या पर्यायांची तुलना करा"
+  ],
+  "crop_demo_open": [
+    "Optional: try the synthetic learning model",
+    "वैकल्पिक: कृत्रिम उदाहरणों का शैक्षिक मॉडल देखें",
+    "ऐच्छिक: कृत्रिम उदाहरणांवरील शैक्षणिक मॉडेल पाहा"
+  ]
+};
+ ["en","hi","mr"].forEach((lang,i) => Object.entries(copy).forEach(([key,text]) => { TRANSLATIONS[lang][key] = text[i]; }));
+ I18n.apply();
+})();

@@ -18,7 +18,7 @@
       opening: 'Opening', search: 'marketplace search',
       market: 'marketplace', cart: 'your cart', guides: 'crop guides', assistant: 'farming assistant',
       weather: 'weather', analytics: 'your farm insights', crop: 'crop options', health: 'plant health',
-      home: 'home', orders: 'your orders', planner: 'farm planner'
+      home: 'home', orders: 'your orders', planner: 'farm planner', fields: 'your fields and advice', decisions: 'cost and selling calculations'
     },
     hi: {
       title: 'बोलकर पृष्ठ खोलें', start: 'माइक्रोफ़ोन इस्तेमाल करें', stop: 'सुनना बंद करें',
@@ -36,7 +36,7 @@
       opening: 'खोल रहे हैं:', search: 'बाज़ार में खोज',
       market: 'बाज़ार', cart: 'आपकी टोकरी', guides: 'फसल मार्गदर्शिका', assistant: 'खेती सहायक',
       weather: 'मौसम', analytics: 'आपकी खेती की जानकारी', crop: 'फसल के विकल्प', health: 'पौधों का स्वास्थ्य',
-      home: 'मुख्य पृष्ठ', orders: 'आपके ऑर्डर', planner: 'खेती की योजना'
+      home: 'मुख्य पृष्ठ', orders: 'आपके ऑर्डर', planner: 'खेती की योजना', fields: 'आपके खेत और सलाह', decisions: 'खर्च और बिक्री का हिसाब'
     },
     mr: {
       title: 'बोलून पान उघडा', start: 'मायक्रोफोन वापरा', stop: 'ऐकणे थांबवा',
@@ -54,11 +54,13 @@
       opening: 'उघडत आहोत:', search: 'बाजारातील शोध',
       market: 'बाजार', cart: 'तुमची टोपली', guides: 'पीक मार्गदर्शिका', assistant: 'शेती सहाय्यक',
       weather: 'हवामान', analytics: 'तुमच्या शेतीची माहिती', crop: 'पिकांचे पर्याय', health: 'पिकांचे आरोग्य',
-      home: 'मुख्य पान', orders: 'तुमच्या ऑर्डर', planner: 'शेतीचे नियोजन'
+      home: 'मुख्य पान', orders: 'तुमच्या ऑर्डर', planner: 'शेतीचे नियोजन', fields: 'तुमची शेती आणि सल्ला', decisions: 'खर्च आणि विक्रीचा हिशेब'
     }
   };
   const locales = {en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN'};
   const commands = [
+    ['fields', '/my-farm', ['my farm', 'my fields', 'field advice', 'today advice', 'मेरे खेत', 'मेरा खेत', 'आज की सलाह', 'माझे शेत', 'माझं शेत', 'आजचा सल्ला']],
+    ['decisions', '/farm-decisions', ['selling costs', 'farm calculations', 'profit calculation', 'cost comparison', 'बिक्री का हिसाब', 'खर्च का हिसाब', 'विक्रीचा हिशेब', 'खर्चाचा हिशेब', 'नफा तोटा']],
     ['market', '/marketplace/', ['open marketplace', 'marketplace', 'open market', 'market', 'बाज़ार खोलें', 'बाजार खोलें', 'बाजार खोलो', 'बाज़ार', 'बाजार', 'मंडी', 'बाजार उघडा', 'शेतमाल बाजार']],
     ['cart', '/cart/', ['open cart', 'my cart', 'cart', 'shopping cart', 'मेरी टोकरी', 'टोकरी खोलें', 'टोकरी', 'माझी टोपली', 'टोपली उघडा', 'टोपली']],
     ['orders', null, ['my orders', 'orders', 'order status', 'मेरे ऑर्डर', 'ऑर्डर दिखाओ', 'ऑर्डर', 'माझ्या ऑर्डर', 'ऑर्डर दाखवा']],
@@ -131,7 +133,7 @@
     const match = commands.find(([, , phrases]) => phrases.includes(command));
     if (!match) { statusKey = 'unknown'; render(); return; }
     const [label, configuredPath] = match;
-    if (label === 'planner' && !document.querySelector('a[href="/auth/farmer/dashboard"]') &&
+    if (['planner', 'fields', 'decisions'].includes(label) && !document.querySelector('a[href="/auth/farmer/dashboard"]') &&
         !document.querySelector('a[href="/auth/login"]')) {
       statusKey = 'unavailable'; render(); return;
     }
