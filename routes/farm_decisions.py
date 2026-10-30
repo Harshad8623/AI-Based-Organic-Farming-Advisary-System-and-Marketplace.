@@ -7,6 +7,7 @@ import calendar
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import re
+import unicodedata
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, render_template, request
@@ -44,7 +45,7 @@ def _number(values, name, *, minimum=Decimal('0'), maximum=_MAX_MONEY,
     raw = values.get(name, '')
     if not isinstance(raw, str):
         raise DecisionInputError(error)
-    raw = raw.strip()
+    raw = ''.join(str(unicodedata.decimal(char)) if char.isdecimal() else char for char in raw.strip())
     if not raw and optional:
         return None
     if not raw or len(raw) > 40 or not _NUMBER.fullmatch(raw):
@@ -194,7 +195,8 @@ def index():
     values = {'harvest_unit':'kg', 'cost_source':'manual', 'ledger_month':month,
               'farmgate_price_unit':'kg', 'market_price_unit':'kg', 'transport_cost':'0',
               'market_fees':'0', 'spoilage_percent':'0', 'area_unit':'acre'}
-    sales, water, error, active, status = None, None, None, 'sales', 200
+    selected = 'water' if request.args.get('tool') == 'water' else 'sales'
+    sales, water, error, active, status = None, None, None, selected, 200
     if request.method == 'POST':
         values.update(request.form.to_dict())
         active = request.form.get('calculator', '')

@@ -101,6 +101,17 @@ def test_kg_and_quintal_price_and_weight_units_are_independent():
     assert converted == base == mixed
 
 
+def test_marathi_keyboard_amounts_keep_selling_and_water_arithmetic_exact():
+    result = sales_calculation(sales_values(harvest_quantity='१०००', cultivation_cost='१२०००',
+        farmgate_price='१८', market_price='२२', transport_cost='२०००', market_fees='१०००', spoilage_percent='१०'))
+    assert result['farmgate_net'] == Decimal('6000')
+    assert result['market_net'] == Decimal('4800')
+    water = water_calculation(water_values(area_value='१०००', area_unit='m2', depth_mm='१०',
+                                          efficiency_percent='५०', pump_lpm='१००'))
+    assert water['gross_litres'] == Decimal('20000')
+    assert water['pump_minutes'] == Decimal('200')
+
+
 def test_equal_options_zero_cost_and_negative_net_are_reported():
     equal = sales_calculation(sales_values(harvest_quantity='100', cultivation_cost='0',
         farmgate_price='20', market_price='20', transport_cost='0', market_fees='0', spoilage_percent='0'))

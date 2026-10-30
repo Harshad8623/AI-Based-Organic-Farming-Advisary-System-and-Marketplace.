@@ -8,6 +8,7 @@ from functools import wraps
 from io import StringIO
 import re
 import secrets
+import unicodedata
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, redirect, render_template, request, Response, session, url_for
@@ -152,7 +153,7 @@ def _render(error=None, form_kind=None, values=None, status=200):
 
     def page_url(*, task=task_page, ledger=ledger_page, anchor):
         return url_for('farm_tools.index', month=month, tasks_page=task,
-                       ledger_page=ledger, _anchor=anchor)
+                       ledger_page=ledger, view='money' if anchor == 'farm-ledger' else 'work', _anchor=anchor)
 
     return render_template(
         'farm_tools/index.html', today=today, month=month,
@@ -170,13 +171,16 @@ def _render(error=None, form_kind=None, values=None, status=200):
     ), status
 
 
-def _redirect(month=None):
+def _redirect(month=None, *, view=None):
     if month:
         try:
             _month_range(month)
         except ValueError:
             month = None
-    return redirect(url_for('farm_tools.index', **({'month': month} if month else {})), code=303)
+    params = {'view': 'money'} if view == 'money' else {}
+    if month:
+        params['month'] = month
+    return redirect(url_for('farm_tools.index', **params), code=303)
 
 
 def _submission(model, kind):
@@ -256,13 +260,14 @@ def add_entry():
         submission, duplicate = _submission(FarmLedgerEntry, 'ledger')
         if duplicate:
             existing = FarmLedgerEntry.query.filter_by(farmer_id=current_user.id, submission_id=submission).first()
-            return _redirect(existing.entry_date.strftime('%Y-%m'))
+            return _redirect(existing.entry_date.strftime('%Y-%m'), view='money')
         kind = request.form.get('kind', '')
         category = request.form.get('category', '')
         note = request.form.get('note', '').strip()
         if kind not in ('income', 'expense') or category not in CATEGORIES or len(note) > 240:
             raise ValueError('farm_error_entry')
-        amount_text = request.form.get('amount', '').strip()
+        amount_text = ''.join(str(unicodedata.decimal(char)) if char.isdecimal() else char
+                              for char in request.form.get('amount', '').strip())
         if not AMOUNT_PATTERN.fullmatch(amount_text):
             raise ValueError('farm_error_amount')
         amount = Decimal(amount_text)
@@ -286,7 +291,7 @@ def add_entry():
         if not existing:
             raise
         entry_date = existing.entry_date
-    return _redirect(entry_date.strftime('%Y-%m'))
+    return _redirect(entry_date.strftime('%Y-%m'), view='money')
 
 
 @farm_tools_bp.post('/ledger/<int:entry_id>/delete')
@@ -296,7 +301,7 @@ def delete_entry(entry_id):
     month = entry.entry_date.strftime('%Y-%m')
     db.session.delete(entry)
     db.session.commit()
-    return _redirect(month)
+    return _redirect(month, view='money')
 
 
 def _csv_text(value):

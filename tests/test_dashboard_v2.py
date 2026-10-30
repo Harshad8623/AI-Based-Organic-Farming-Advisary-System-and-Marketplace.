@@ -6,6 +6,7 @@ from flask import template_rendered
 
 from advisory_models import FarmField
 from farm_tools_models import FarmTask, FarmLedgerEntry
+from credit_models import CreditAccount
 from models import db, User
 
 
@@ -33,6 +34,16 @@ def test_dashboard_uses_private_active_fields_open_work_and_exact_month_totals(a
                 (4,owner,'income','9999.00',date(2026,9,30)),(5,other,'income','8000.00',date(2026,10,1))]:
             db.session.add(FarmLedgerEntry(farmer_id=person.id,kind=kind,amount=Decimal(amount),
                 category='other',entry_date=day,submission_id=f'money-{number}'))
+        for number, person, direction, total, settled, due in [
+                (1,owner,'receive',10010,201,date(2026,9,30)),
+                (2,owner,'pay',500,100,date(2026,10,1)),
+                (3,owner,'receive',999900,0,date(2026,10,2)),
+                (4,other,'receive',888800,0,date(2026,9,30)),
+                (5,owner,'receive',200,200,date(2026,9,30)),
+                (6,owner,'pay',300,0,None)]:
+            db.session.add(CreditAccount(farmer_id=person.id,contact_name=f'Contact {number}',
+                direction=direction,total_paise=total,settled_paise=settled,entry_date=date(2026,9,1),
+                due_date=due,submission_id=f'credit-{number}'))
         db.session.commit()
         owner_id = owner.id
     with client.session_transaction() as session:
@@ -47,3 +58,9 @@ def test_dashboard_uses_private_active_fields_open_work_and_exact_month_totals(a
     assert captured[-1]['farm_stats'] == {'fields_count':2,'open_tasks':2,'overdue_tasks':1,
         'monthly_income':Decimal('0.30'),'monthly_expenses':Decimal('0.05')}
     assert b'9999.00' not in response.data and b'8000.00' not in response.data
+    daily = captured[-1]['daily_home']
+    assert daily['today'] == date(2026,10,1)
+    assert [task.title for task in daily['due_tasks']] == ['Task 1','Task 2']
+    assert daily['receive_due'] == Decimal('98.09')
+    assert daily['pay_due'] == Decimal('4.00')
+    assert b'8888.00' not in response.data

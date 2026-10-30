@@ -201,12 +201,22 @@ def farmer_dashboard():
         'overdue_tasks': tasks.filter(FarmTask.due_date < today).count(),
         'monthly_income': money['income'], 'monthly_expenses': money['expense'],
     }
+    from routes.farm_tools import _advisory_task_context
+    from routes.credit_book import due_balances
+    due_tasks = tasks.filter(FarmTask.due_date <= today).order_by(FarmTask.due_date, FarmTask.id).limit(5).all()
+    credit_due = due_balances(current_user.id, today)
+    daily_home = {
+        'today': today, 'due_tasks': due_tasks,
+        'task_advice': _advisory_task_context(due_tasks, today),
+        'overdue_count': farm_stats['overdue_tasks'], 'fields_count': farm_stats['fields_count'],
+        'receive_due': credit_due['receive'], 'pay_due': credit_due['pay'],
+    }
     return render_template('farmer/dashboard.html',
                            products=products,
                            pending_orders=pending_orders,
                            total_orders=total_orders,
                            total_revenue=round(total_revenue, 2),
-                           roadmap_count=roadmap_count, farm_stats=farm_stats)
+                           roadmap_count=roadmap_count, farm_stats=farm_stats, daily_home=daily_home)
 
 
 @auth_bp.route('/buyer/dashboard')

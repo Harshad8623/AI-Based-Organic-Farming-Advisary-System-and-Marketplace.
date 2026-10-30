@@ -150,6 +150,20 @@ def test_invalid_money_never_reaches_journal(app, client, farmers, amount):
         assert FarmLedgerEntry.query.count() == 0
 
 
+def test_marathi_amount_and_ledger_redirect_keep_money_view(app, client, farmers):
+    from urllib.parse import parse_qs, urlsplit
+    sign_in(client, farmers[0])
+    response = client.post('/farm-tools/ledger', data=entry_data(client, amount='१२५.५०'))
+    assert response.status_code == 303
+    assert parse_qs(urlsplit(response.location).query)['view'] == ['money']
+    with app.app_context():
+        entry = FarmLedgerEntry.query.one()
+        assert entry.amount == Decimal('125.50')
+        entry_id = entry.id
+    response = client.post(f'/farm-tools/ledger/{entry_id}/delete')
+    assert parse_qs(urlsplit(response.location).query)['view'] == ['money']
+
+
 @pytest.mark.parametrize('changes', [{'entry_date': '2026-10-29'}, {'entry_date': '2025-02-29'},
                                     {'entry_date': '1899-01-01'}, {'kind': 'profit'},
                                     {'category': 'unknown'}, {'note': 'x' * 241}])

@@ -1,6 +1,13 @@
 /* Built-in farmer planner translations; no network or API key is needed. */
 (() => {
   const copy = {
+    farm_sections: ['Work and money', 'काम और हिसाब', 'काम आणि हिशेब'],
+    farm_work_tab: ['Work', 'काम', 'कामे'],
+    farm_money_tab: ['Income & expenses', 'आय और खर्च', 'जमा व खर्च'],
+    farm_credit_tab: ['Money owed', 'उधार का हिसाब', 'उधारी वही'],
+    farm_entry_extra: ['Change date or add a note', 'तारीख बदलें या टिप्पणी लिखें', 'तारीख बदला किंवा टीप लिहा'],
+    farm_compare_link: ['Check costs before selling', 'बेचने से पहले खर्च जाँचें', 'विक्रीपूर्वी खर्चाचा हिशेब पाहा'],
+    farm_money_title: ['Farm accounts', 'खेती का हिसाब', 'शेतीचा हिशेब'],
     farm_eyebrow: ['A little planning. A better season.', 'थोड़ी योजना, बेहतर मौसम।', 'थोडे नियोजन, चांगला हंगाम.'],
     farm_title: ['My farm planner', 'मेरे खेत की योजना', 'माझ्या शेतीचे नियोजन'],
     farm_subtitle: ['Keep your next task and your farm spending in one place.', 'अगला काम और खेती का खर्च एक जगह रखें।', 'पुढचे काम आणि शेतीचा खर्च एकाच ठिकाणी नोंदवा.'],
@@ -10,7 +17,7 @@
     farm_tasks_title: ['What needs doing?', 'कौन से काम करने हैं?', 'कोणती कामे करायची आहेत?'],
     farm_open_tasks: ['open tasks', 'बाकी काम', 'बाकी कामे'],
     farm_overdue_tasks: ['overdue', 'तारीख बीत गई', 'मुदत उलटलेली'],
-    farm_reminder_note: ['Check this planner for reminders; no SMS or notifications are sent.', 'याद रखने के लिए यह योजना देखें; SMS या सूचनाएँ नहीं भेजी जाती हैं।', 'आठवणीसाठी हे नियोजन पाहा; SMS किंवा सूचना पाठवल्या जात नाहीत.'],
+    farm_reminder_note: ['Reminders appear here. No SMS is sent.', 'याद रखने वाले काम यहाँ दिखते हैं। SMS नहीं भेजा जाता।', 'आठवणीची कामे इथे दिसतात. SMS पाठवला जात नाही.'],
     farm_new_task: ['Add a farm task', 'खेती का काम जोड़ें', 'शेतीचे काम जोडा'],
     farm_task_label: ['Task', 'काम', 'काम'],
     farm_task_placeholder: ['e.g. Check drip irrigation', 'जैसे: टपक सिंचाई जाँचें', 'उदा. ठिबक सिंचन तपासा'],
@@ -30,15 +37,15 @@
     farm_mark_done: ['Mark done', 'पूरा हुआ चुनें', 'पूर्ण झाले निवडा'],
     farm_delete: ['Delete', 'हटाएँ', 'काढून टाका'],
     farm_delete_task_confirm: ['Delete this task? This cannot be undone.', 'यह काम हटाएँ? इसे वापस नहीं लाया जा सकता।', 'हे काम काढून टाकायचे? ते पुन्हा मिळवता येणार नाही.'],
-    farm_tasks_empty: ['Start with one small task', 'एक छोटे काम से शुरू करें', 'एका छोट्या कामापासून सुरुवात करा'],
-    farm_tasks_empty_hint: ['Plan soil testing, irrigation checks, sowing or a market visit.', 'मिट्टी परीक्षण, सिंचाई जाँच, बुवाई या बाजार जाने की योजना बनाएँ।', 'माती परीक्षण, सिंचन तपासणी, पेरणी किंवा बाजारभेटीचे नियोजन करा.'],
+    farm_tasks_empty: ['No work saved yet', 'अभी कोई काम दर्ज नहीं है', 'अजून कोणतेही काम नोंदवले नाही'],
+    farm_tasks_empty_hint: ['Write a task and its date above.', 'ऊपर काम और उसकी तारीख लिखें।', 'वर काम आणि त्याची तारीख लिहा.'],
     farm_ledger_title: ['Farm money diary', 'खेती की हिसाब डायरी', 'शेतीची हिशेब वही'],
-    farm_manual_note: ['Your manual records only. Marketplace orders are not added automatically.', 'केवल आपके दर्ज किए गए हिसाब। बाजार के ऑर्डर अपने आप नहीं जुड़ते।', 'फक्त तुम्ही नोंदवलेला हिशेब. बाजारातील ऑर्डर आपोआप जोडल्या जात नाहीत.'],
+    farm_manual_note: ['Only entries saved here. Orders and credit are separate.', 'सिर्फ यहाँ दर्ज हिसाब। ऑर्डर और उधार अलग हैं।', 'फक्त इथे नोंदवलेला हिशेब. ऑर्डर आणि उधारी वेगळी आहेत.'],
     farm_month: ['View month', 'महीना देखें', 'महिना पाहा'],
     farm_show: ['Show', 'दिखाएँ', 'दाखवा'],
-    farm_income_month: ['Income for selected month', 'चुने हुए महीने की आय', 'निवडलेल्या महिन्यातील उत्पन्न'],
-    farm_expense_month: ['Expenses for selected month', 'चुने हुए महीने का खर्च', 'निवडलेल्या महिन्यातील खर्च'],
-    farm_net_month: ['Net recorded amount', 'दर्ज हिसाब की शेष राशि', 'नोंदींनुसार निव्वळ रक्कम'],
+    farm_income_month: ['Month’s income', 'महीने की आय', 'महिन्यातील जमा'],
+    farm_expense_month: ['Month’s expenses', 'महीने का खर्च', 'महिन्यातील खर्च'],
+    farm_net_month: ['Income minus expenses', 'आय में से खर्च घटाकर', 'जमा वजा खर्च'],
     farm_net_hint: ['Income minus expenses for the selected month', 'चुने हुए महीने की आय में से खर्च घटाकर', 'निवडलेल्या महिन्यातील उत्पन्न वजा खर्च'],
     farm_new_entry: ['Add a money record', 'हिसाब की नोंद जोड़ें', 'हिशेबाची नोंद जोडा'],
     farm_type: ['Type', 'प्रकार', 'प्रकार'],
@@ -46,7 +53,7 @@
     farm_income: ['Income', 'आय', 'उत्पन्न'],
     farm_amount: ['Amount (₹ INR)', 'राशि (₹ रुपये)', 'रक्कम (₹ रुपये)'],
     farm_entry_date: ['Date received or paid', 'पैसा मिलने या देने की तारीख', 'पैसे मिळाल्याची किंवा दिल्याची तारीख'],
-    farm_category: ['Category', 'श्रेणी', 'प्रकार'],
+    farm_category: ['What for?', 'किस लिए?', 'कशासाठी?'],
     farm_category_seeds: ['Seeds', 'बीज', 'बियाणे'],
     farm_category_soil_inputs: ['Soil inputs', 'मिट्टी और खाद', 'माती व खते'],
     farm_category_labour: ['Labour', 'मजदूरी', 'मजुरी'],
@@ -59,10 +66,10 @@
     farm_note_placeholder: ['e.g. Seeds for the north field', 'जैसे: उत्तर वाले खेत के लिए बीज', 'उदा. उत्तरेकडील शेतासाठी बियाणे'],
     farm_save_entry: ['Save record', 'नोंद सहेजें', 'नोंद जतन करा'],
     farm_records: ['records in selected month', 'चुने हुए महीने की नोंदें', 'निवडलेल्या महिन्यातील नोंदी'],
-    farm_export: ['Download month as CSV', 'महीने का CSV डाउनलोड करें', 'महिन्याची CSV डाउनलोड करा'],
+    farm_export: ['Download CSV', 'CSV डाउनलोड करें', 'CSV डाउनलोड करा'],
     farm_delete_entry_confirm: ['Delete this money record? Your totals will change.', 'यह हिसाब हटाएँ? आपकी कुल राशि बदल जाएगी।', 'ही हिशेबाची नोंद काढून टाकायची? एकूण रक्कम बदलेल.'],
     farm_ledger_limit: ['Showing up to 100 records per page. Monthly totals and CSV include all records.', 'हर पृष्ठ पर अधिकतम 100 नोंदें दिखाई गई हैं। महीने के कुल हिसाब और CSV में सभी नोंदें शामिल हैं।', 'प्रत्येक पानावर जास्तीत जास्त 100 नोंदी दाखवल्या आहेत. महिन्याच्या एकूण हिशेबात आणि CSV मध्ये सर्व नोंदी आहेत.'],
-    farm_ledger_empty: ['Know where your money goes', 'जानें आपका पैसा कहाँ जाता है', 'पैसे कुठे खर्च होतात ते पाहा'],
+    farm_ledger_empty: ['No records this month', 'इस महीने कोई हिसाब नहीं है', 'या महिन्यात नोंदी नाहीत'],
     farm_ledger_empty_hint: ['No records this month. Add the cost of seeds, labour or your latest produce sale.', 'इस महीने कोई नोंद नहीं है। बीज, मजदूरी का खर्च या उपज की बिक्री जोड़ें।', 'या महिन्यात नोंदी नाहीत. बियाणे, मजुरीचा खर्च किंवा शेतमालाची विक्री नोंदवा.'],
     farm_error_date: ['Enter a real date between 1900 and 2100.', '1900 से 2100 के बीच सही तारीख चुनें।', '1900 ते 2100 मधील योग्य तारीख निवडा.'],
     farm_error_month: ['Choose a valid month between 1900 and 2100.', '1900 से 2100 के बीच सही महीना चुनें।', '1900 ते 2100 मधील योग्य महिना निवडा.'],
@@ -112,6 +119,29 @@
       I18n.onLangChange(localizeDates);
     }
     localizeDates();
+    function showHashView() {
+      const target = window.location.hash;
+      if (target !== '#farm-ledger' && target !== '#farm-tasks') return;
+      const view = target === '#farm-ledger' ? 'money' : 'work';
+      document.querySelectorAll('[data-farm-view]').forEach(section => {
+        section.hidden = section.dataset.farmView !== view;
+      });
+      document.querySelectorAll('[data-farm-tab]').forEach(link => {
+        const selected = link.dataset.farmTab === view;
+        link.classList.toggle('btn-success', selected);
+        link.classList.toggle('btn-outline-success', !selected);
+        if (selected) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+      });
+      const heading = document.querySelector('[data-farm-heading]');
+      if (heading) {
+        const key = view === 'money' ? 'farm_money_title' : 'farm_title';
+        heading.dataset.i18n = key;
+        heading.textContent = typeof I18n !== 'undefined' ? I18n.t(key) : copy[key][0];
+      }
+    }
+    showHashView();
+    window.addEventListener('hashchange', showHashView);
     document.querySelectorAll('form[data-farm-confirm]').forEach(form => {
       form.addEventListener('submit', event => {
         const key = form.dataset.farmConfirm;

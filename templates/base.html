@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#23583c">
-  <meta name="description" content="Dharti Rakshak: field observations, explained farm advice, work records and a farmer marketplace in English, Hindi and Marathi.">
+  <meta name="theme-color" content="#234d35">
+  <meta name="description" content="Practical farm help, daily work, farm accounts and a local farmer marketplace in Marathi, Hindi and English.">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>{% block title %}Dharti Rakshak — My farm notebook{% endblock %}</title>
+  <title>{% block title %}Dharti Rakshak{% endblock %}</title>
   <script src="{{ url_for('static', filename='js/security.js') }}"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons.css') }}">
@@ -14,92 +14,78 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body>
+  {% set home_endpoint = 'auth.farmer_dashboard' if current_user.is_authenticated and current_user.is_farmer() else 'auth.buyer_dashboard' if current_user.is_authenticated else 'index' %}
   <a class="skip-link" href="#main-content" data-i18n="skip_to_content">Skip to content</a>
   <header class="site-header">
-    <div class="container nav-bar">
-      <a class="site-brand" href="{{ url_for('index') }}" aria-label="Dharti Rakshak home" data-i18n-aria="nav_brand_home">
-        <i class="bi bi-flower1 brand-mark" aria-hidden="true"></i><span><strong class="devanagari-brand">धरती रक्षक</strong><small data-i18n="app_notebook">Your farm notebook</small></span>
-      </a>
+    <div class="container header-layout nav-bar">
+      <a class="site-brand" href="{{ url_for(home_endpoint) }}" aria-label="Dharti Rakshak home" data-i18n-aria="nav_brand_home"><strong class="devanagari-brand">धरती रक्षक</strong></a>
+      <nav id="main-navigation" class="main-navigation" aria-label="Main navigation" data-i18n-aria="nav_main">
+        <div class="nav-primary">
+          <a class="site-nav-link {{ 'active' if request.endpoint == home_endpoint }}" href="{{ url_for(home_endpoint) }}" data-i18n="daily_home">Home</a>
+          {% if not current_user.is_authenticated or current_user.is_farmer() %}
+          <a class="site-nav-link {{ 'active' if request.blueprint == 'farm_advisory' }}" href="{{ url_for('farm_advisory.index') }}" data-i18n="daily_fields">My fields</a>
+          <a class="site-nav-link {{ 'active' if request.blueprint in ['farm_tools','credit_book'] }}" href="{{ url_for('farm_tools.index',view='money') }}" data-i18n="daily_money">Accounts</a>
+          {% endif %}
+          <a class="site-nav-link {{ 'active' if request.blueprint == 'marketplace' }}" href="{{ url_for('marketplace.listing') }}" data-i18n="daily_market">Market</a>
+          <details class="tools-menu">
+            <summary class="site-nav-link"><span data-i18n="daily_other">Other work</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+            <div class="tools-menu-panel">
+              <a href="{{ url_for('farm_help.index',problem='water') }}" data-i18n="daily_water">Should I water today?</a>
+              <a href="{{ url_for('farm_help.index',problem='plant') }}" data-i18n="daily_plant">A problem with my crop</a>
+              {% if current_user.is_authenticated and current_user.is_farmer() %}
+              <a href="{{ url_for('credit_book.index') }}" data-i18n="daily_credit">Money owed</a>
+              <a href="{{ url_for('farm_decisions.index') }}" data-i18n="daily_sell_price">Check my selling price</a>
+              <a href="{{ url_for('marketplace.add_product') }}" data-i18n="daily_list_produce">List produce for sale</a>
+              <a href="{{ url_for('marketplace.my_products') }}" data-i18n="daily_my_produce">My produce</a>
+              <a href="{{ url_for('orders.farmer_orders') }}" data-i18n="daily_incoming_orders">Buyer orders</a>
+              {% endif %}
+              {% if current_user.is_authenticated and current_user.is_buyer() %}
+              <a href="{{ url_for('orders.buyer_orders') }}" data-i18n="nav_my_orders">My orders</a>
+              <a href="{{ url_for('cart.view_cart') }}" data-i18n="cart_heading">My cart</a>
+              {% endif %}
+              <a href="{{ url_for('weather.advisory') }}" data-i18n="nav_weather">Weather</a>
+              <a href="{{ url_for('roadmap.index') }}" data-i18n="nav_crop_roadmaps">Crop guides</a>
+              {% if current_user.is_authenticated %}
+              <a href="{{ url_for('chatbot.chat') }}" data-i18n="nav_chatbot">Farming assistant</a>
+              <a href="{{ url_for('analytics.dashboard') }}" data-i18n="nav_analytics">Insights</a>
+              {% if current_user.is_farmer() %}
+              <a href="{{ url_for('disease.detect') }}" data-i18n="daily_leaf_photo">Check a leaf photo</a>
+              <a href="{{ url_for('crop.recommend') }}" data-i18n="app_crop_demo">Crop model · learning demo</a>
+              {% endif %}
+              {% endif %}
+            </div>
+          </details>
+        </div>
+        <div class="nav-account">
+          {% if current_user.is_authenticated %}
+          <span class="account-name">{{ current_user.name }}</span><form action="{{ url_for('auth.logout') }}" method="post" class="logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="site-nav-link" type="submit" data-i18n="nav_logout">Logout</button></form>
+          {% else %}<a class="site-nav-link" href="{{ url_for('auth.login') }}" data-i18n="nav_login">Login</a><a class="site-nav-link" href="{{ url_for('auth.register') }}" data-i18n="nav_register">Create account</a>{% endif %}
+        </div>
+      </nav>
       <div class="nav-actions">
         <div class="lang-switcher" role="group" aria-label="Choose language" data-i18n-aria="nav_language">
-          <button type="button" class="lang-btn" data-lang="en" lang="en" aria-pressed="true">English</button>
-          <button type="button" class="lang-btn" data-lang="hi" lang="hi" aria-pressed="false">हिंदी</button>
-          <button type="button" class="lang-btn" data-lang="mr" lang="mr" aria-pressed="false">मराठी</button>
+          <button type="button" class="lang-btn" data-lang="en" lang="en" aria-pressed="true" aria-label="English">EN</button><button type="button" class="lang-btn" data-lang="hi" lang="hi" aria-pressed="false">हिंदी</button><button type="button" class="lang-btn" data-lang="mr" lang="mr" aria-pressed="false">मराठी</button>
         </div>
         <button type="button" class="mobile-menu-toggle" aria-controls="main-navigation" aria-expanded="false" data-i18n-aria="nav_toggle" aria-label="Open navigation"><i class="bi bi-list" aria-hidden="true"></i></button>
       </div>
     </div>
-    <nav id="main-navigation" class="main-navigation container" aria-label="Main navigation" data-i18n-aria="nav_main">
-      <div class="nav-primary">
-        {% if current_user.is_authenticated and current_user.is_farmer() %}
-        <a class="site-nav-link {{ 'active' if request.blueprint == 'farm_advisory' }}" href="{{ url_for('farm_advisory.index') }}"><i class="bi bi-flower2" aria-hidden="true"></i><span data-i18n="app_my_farm">My farm</span></a>
-        <a class="site-nav-link {{ 'active' if request.blueprint == 'farm_tools' }}" href="{{ url_for('farm_tools.index') }}"><i class="bi bi-journal-check" aria-hidden="true"></i><span data-i18n="app_work_money">Work & money</span></a>
-        {% else %}
-        <a class="site-nav-link {{ 'active' if request.endpoint == 'index' }}" href="{{ url_for('index') }}" data-i18n="nav_home">Home</a>
-        {% endif %}
-        <a class="site-nav-link {{ 'active' if request.blueprint == 'marketplace' }}" href="{{ url_for('marketplace.listing') }}"><i class="bi bi-shop" aria-hidden="true"></i><span data-i18n="app_market">Market</span></a>
-        {% if current_user.is_authenticated and current_user.is_buyer() %}
-        <a class="site-nav-link {{ 'active' if request.blueprint == 'orders' }}" href="{{ url_for('orders.buyer_orders') }}" data-i18n="nav_my_orders">My orders</a>
-        {% endif %}
-        <details class="tools-menu">
-          <summary class="site-nav-link"><span data-i18n="app_more_tools">More tools</span><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
-          <div class="tools-menu-panel">
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('auth.farmer_dashboard' if current_user.is_farmer() else 'auth.buyer_dashboard') }}"><i class="bi bi-grid" aria-hidden="true"></i><span data-i18n="app_overview">Overview</span></a>
-            {% if current_user.is_farmer() %}
-            <a href="{{ url_for('farm_decisions.index') }}"><i class="bi bi-calculator" aria-hidden="true"></i><span data-i18n="app_cost_tools">Costs & selling decisions</span></a>
-            <a href="{{ url_for('orders.farmer_orders') }}"><i class="bi bi-box-seam" aria-hidden="true"></i><span data-i18n="app_incoming_orders">Incoming orders</span></a>
-            <a href="{{ url_for('marketplace.my_products') }}"><i class="bi bi-basket2" aria-hidden="true"></i><span data-i18n="dash_manage_produce">Manage my produce</span></a>
-            {% endif %}
-            <a href="{{ url_for('weather.advisory') }}"><i class="bi bi-cloud-sun" aria-hidden="true"></i><span data-i18n="nav_weather">Weather</span></a>
-            {% if current_user.is_farmer() %}
-            <a href="{{ url_for('disease.detect') }}"><i class="bi bi-search" aria-hidden="true"></i><span data-i18n="nav_disease">Plant health</span></a>
-            {% endif %}
-            <a href="{{ url_for('chatbot.chat') }}"><i class="bi bi-chat-dots" aria-hidden="true"></i><span data-i18n="nav_chatbot">Farming assistant</span></a>
-            <a href="{{ url_for('analytics.dashboard') }}"><i class="bi bi-bar-chart" aria-hidden="true"></i><span data-i18n="nav_analytics">Insights</span></a>
-            {% endif %}
-            <a href="{{ url_for('roadmap.index') }}"><i class="bi bi-map" aria-hidden="true"></i><span data-i18n="nav_crop_roadmaps">Crop guides</span></a>
-            {% if current_user.is_authenticated and current_user.is_farmer() %}
-            <a href="{{ url_for('crop.recommend') }}"><i class="bi bi-mortarboard" aria-hidden="true"></i><span data-i18n="app_crop_demo">Crop model · learning demo</span></a>
-            {% endif %}
-            <a href="{{ url_for('index') }}#about"><i class="bi bi-info-circle" aria-hidden="true"></i><span data-i18n="nav_about">About the project</span></a>
-          </div>
-        </details>
-      </div>
-      <div class="nav-account">
-        {% if current_user.is_authenticated %}
-          {% if current_user.is_buyer() %}<a class="site-nav-link cart-link" href="{{ url_for('cart.view_cart') }}"><i class="bi bi-cart3" aria-hidden="true"></i><span data-i18n="cart_heading">My cart</span>{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a>{% endif %}
-          <span class="account-name" title="{{ current_user.name }}">{{ current_user.name }}</span>
-          <form action="{{ url_for('auth.logout') }}" method="post" class="logout-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="site-nav-link" type="submit"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span data-i18n="nav_logout">Logout</span></button></form>
-        {% else %}
-          <a class="site-nav-link" href="{{ url_for('auth.login') }}" data-i18n="nav_login">Login</a><a class="btn btn-success" href="{{ url_for('auth.register') }}" data-i18n="nav_register">Create account</a>
-        {% endif %}
-      </div>
-    </nav>
   </header>
   <div id="connection-notice" class="connection-notice" role="status" hidden data-i18n="connection_offline">You are offline. Keep this page open and reconnect before saving.</div>
   <div id="translation-notice" class="translation-notice container" role="status" aria-live="polite" hidden></div>
-  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}
-  <div class="container flash-messages">{% for category, message in messages %}<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert"><span{% if message_key(message) %} data-i18n="{{ message_key(message) }}"{% endif %}>{{ message }}</span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss message" data-i18n-aria="dismiss_message"></button></div>{% endfor %}</div>
-  {% endif %}{% endwith %}
+  {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="container flash-messages">{% for category, message in messages %}<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert"><span{% if message_key(message) %} data-i18n="{{ message_key(message) }}"{% endif %}>{{ message }}</span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Dismiss message" data-i18n-aria="dismiss_message"></button></div>{% endfor %}</div>{% endif %}{% endwith %}
   <main id="main-content" class="main-content" tabindex="-1">{% block content %}{% endblock %}</main>
-  <footer class="site-footer"><div class="container"><div class="footer-top"><div><strong class="devanagari-brand">धरती रक्षक</strong><p data-i18n="app_footer_note">Field records, clear next steps and your farm accounts.</p></div><a href="{{ url_for('index') }}#about" data-i18n="nav_about">About the project</a></div><p class="attribution">Made by <strong>Harshad Madhav Dhuppe</strong> · PRN <span class="text-nowrap">23025331844046</span> · CSMSS Chh. Shahu College of Engineering Sambhajinagar · Electronics and Computer Engineering.</p></div></footer>
+  <footer class="site-footer"><div class="footer-inner"><details id="about" class="footer-details"><summary data-i18n="daily_project_details">Project details</summary><p class="attribution">Made by <strong>Harshad Madhav Dhuppe</strong> · PRN <span class="text-nowrap">23025331844046</span> · CSMSS Chh. Shahu College of Engineering Sambhajinagar · Electronics and Computer Engineering.</p></details><details class="footer-details voice-options"><summary data-i18n="daily_voice_options">Use voice</summary><div class="container"></div></details></div></footer>
   <nav class="mobile-bottom-nav" aria-label="Quick navigation" data-i18n-aria="app_quick_navigation">
-    {% if current_user.is_authenticated and current_user.is_farmer() %}
-    <a href="{{ url_for('farm_advisory.index') }}" class="{{ 'active' if request.blueprint == 'farm_advisory' }}"{% if request.blueprint == 'farm_advisory' %} aria-current="page"{% endif %}><i class="bi bi-flower2" aria-hidden="true"></i><span data-i18n="app_my_farm">My farm</span></a>
-    <a href="{{ url_for('farm_tools.index') }}" class="{{ 'active' if request.blueprint == 'farm_tools' }}"{% if request.blueprint == 'farm_tools' %} aria-current="page"{% endif %}><i class="bi bi-journal-check" aria-hidden="true"></i><span data-i18n="app_work_money">Work & money</span></a>
-    {% elif current_user.is_authenticated %}
-    <a href="{{ url_for('cart.view_cart') }}" class="{{ 'active' if request.blueprint == 'cart' }}"><i class="bi bi-cart3" aria-hidden="true"></i><span data-i18n="cart_heading">My cart</span></a>
-    <a href="{{ url_for('orders.buyer_orders') }}" class="{{ 'active' if request.blueprint == 'orders' }}"><i class="bi bi-box-seam" aria-hidden="true"></i><span data-i18n="nav_my_orders">My orders</span></a>
+    <a href="{{ url_for(home_endpoint) }}" class="{{ 'active' if request.endpoint == home_endpoint }}"{% if request.endpoint == home_endpoint %} aria-current="page"{% endif %}><i class="bi bi-house" aria-hidden="true"></i><span data-i18n="daily_home">Home</span></a>
+    {% if current_user.is_authenticated and current_user.is_buyer() %}
+    <a href="{{ url_for('marketplace.listing') }}" class="{{ 'active' if request.blueprint == 'marketplace' }}"><i class="bi bi-shop" aria-hidden="true"></i><span data-i18n="daily_market">Market</span></a><a href="{{ url_for('cart.view_cart') }}" class="{{ 'active' if request.blueprint == 'cart' }}"><i class="bi bi-cart3" aria-hidden="true"></i><span data-i18n="cart_heading">My cart</span>{% if cart_count %}<span class="cart-count">{{ cart_count }}</span>{% endif %}</a><a href="{{ url_for('orders.buyer_orders') }}" class="{{ 'active' if request.blueprint == 'orders' }}"><i class="bi bi-box-seam" aria-hidden="true"></i><span data-i18n="nav_my_orders">My orders</span></a>
     {% else %}
-    <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' }}"><i class="bi bi-house" aria-hidden="true"></i><span data-i18n="nav_home">Home</span></a>
-    <a href="{{ url_for('auth.login') }}"><i class="bi bi-person" aria-hidden="true"></i><span data-i18n="nav_login">Login</span></a>
+    <a href="{{ url_for('farm_advisory.index') }}" class="{{ 'active' if request.blueprint == 'farm_advisory' }}"><i class="bi bi-flower2" aria-hidden="true"></i><span data-i18n="daily_fields">My fields</span></a><a href="{{ url_for('farm_tools.index',view='money') }}" class="{{ 'active' if request.blueprint in ['farm_tools','credit_book'] }}"><i class="bi bi-journal-text" aria-hidden="true"></i><span data-i18n="daily_money">Accounts</span></a><a href="#main-navigation" data-open-navigation aria-controls="main-navigation" aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i><span data-i18n="daily_more">More</span></a>
     {% endif %}
-    <a href="{{ url_for('marketplace.listing') }}" class="{{ 'active' if request.blueprint == 'marketplace' }}"><i class="bi bi-shop" aria-hidden="true"></i><span data-i18n="app_market">Market</span></a>
-    <a href="#main-navigation" data-open-navigation aria-controls="main-navigation" aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i><span data-i18n="app_more">More</span></a>
   </nav>
   <script src="{{ url_for('static', filename='vendor/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/daily-ui-i18n.js') }}"></script>
   <script src="{{ url_for('static', filename='js/auth-i18n.js') }}"></script>
   <script src="{{ url_for('static', filename='js/advisory-i18n.js') }}"></script>
   <script src="{{ url_for('static', filename='js/commerce-i18n.js') }}"></script>

@@ -30,9 +30,9 @@ def run_checks(base, executable, artifacts):
         browser = playwright.chromium.launch(**options)
         contexts = []
 
-        def new_page(mobile=False):
+        def new_page(mobile=False, javascript=True):
             context = browser.new_context(viewport={'width': 390 if mobile else 1440, 'height': 900},
-                                          is_mobile=mobile, has_touch=mobile)
+                                          is_mobile=mobile, has_touch=mobile, java_script_enabled=javascript)
             contexts.append(context)
             page = context.new_page()
             page.set_default_timeout(10000)
@@ -80,12 +80,46 @@ def run_checks(base, executable, artifacts):
         farmer.set_viewport_size({'width': 1440, 'height': 1000})
         visit(farmer, '/')
         farmer.screenshot(path=str(artifacts / 'home-desktop.png'), full_page=True)
+        farmer.set_viewport_size({'width':390,'height':844})
+        farmer.locator('[data-lang="mr"]').click()
+        visit(farmer, '/')
+        farmer.screenshot(path=str(artifacts / 'home-phone-marathi.png'))
+        assert farmer.locator('.daily-choice').nth(2).bounding_box()['y'] < 600, 'Daily actions should be visible immediately.'
+        # Common problems can be checked without registration or external AI.
+        visit(farmer, '/farm-help?problem=water')
+        farmer.check('#help-moisture-wet')
+        farmer.check('#help-waterlogging-1')
+        farmer.locator('#help-form button[type="submit"]').click()
+        expect(farmer.locator('#help-result')).to_have_attribute('data-step', 'waterlogging')
+        expect(farmer.locator('#help-result h2')).to_contain_text(re.compile(r'[\u0900-\u097f]'))
+        farmer.screenshot(path=str(artifacts / 'quick-help-mobile-marathi.png'))
         register(farmer, 'farmer@browser.example', 'farmer')
         # Structured field advice, record-based local ML, and repeat-safe tasks.
         farmer.set_viewport_size({'width':390,'height':844})
         farmer.locator('[data-lang="mr"]').click()
+        farmer.screenshot(path=str(artifacts / 'today-phone-marathi.png'))
+        # Credit payments are exact, private and separate from the money diary.
+        visit(farmer, '/credit-book')
+        farmer.fill('#credit-name', 'टोमॅटो व्यापारी')
+        farmer.fill('#credit-amount', '१०००.५०')
+        farmer.locator('details:has(> summary):has(#credit-due-date) > summary').last.click()
+        farmer.fill('#credit-due-date', farmer.locator('#credit-entry-date').get_attribute('max'))
+        farmer.locator('#credit-new-form form button[type="submit"]').click()
+        credit_path = urlsplit(farmer.url).path
+        expect(farmer.locator('#credit-remaining')).to_have_text('₹1,000.50')
+        farmer.fill('#credit-payment-amount', '२००.२५')
+        farmer.locator('#credit-payment-form button[type="submit"]').click()
+        expect(farmer.locator('#credit-remaining')).to_have_text('₹800.25')
+        farmer.screenshot(path=str(artifacts / 'credit-book-mobile-marathi.png'))
+        with farmer.expect_download() as credit_download:
+            farmer.locator('[data-i18n="cb_download"]').click()
+        credit_download.value.save_as(str(artifacts / 'sample-credit-statement.csv'))
+        assert '200.25' in (artifacts / 'sample-credit-statement.csv').read_text(encoding='utf-8-sig')
+        visit(farmer, '/auth/farmer/dashboard')
+        expect(farmer.locator('.daily-reminder').filter(has_text='₹800.25')).to_be_visible()
         visit(farmer, '/my-farm/fields/new')
         farmer.fill('#field-name', 'पूर्वेकडील टोमॅटो शेत')
+        farmer.locator('#field-more-details > summary').click()
         farmer.fill('#field-location', 'सांभाजीनगर')
         for key, value in {'crop':'tomato','stage':'vegetative','soil':'loamy','irrigation':'drip'}.items():
             farmer.select_option('#field-' + key, value)
@@ -140,11 +174,12 @@ def run_checks(base, executable, artifacts):
         expect(farmer.locator('#obs-notes')).to_have_value('')
         for width in (320,390,1440):
             farmer.set_viewport_size({'width':width,'height':900})
-            for path in (field_path, second_report, '/my-farm', '/farm-decisions'):
+            for path in (field_path, second_report, '/my-farm', '/farm-decisions', '/credit-book', credit_path, '/farm-help?problem=plant'):
                 visit(farmer, path)
         farmer.set_viewport_size({'width':390,'height':844})
         farmer.locator('[data-lang="en"]').click()
         visit(farmer, '/farm-decisions')
+        farmer.locator('#sale-extra-costs > summary').click()
         for key, value in {'harvest_quantity':'1000','cultivation_cost':'12000','farmgate_price':'18',
                            'market_price':'22','transport_cost':'3000','market_fees':'0','spoilage_percent':'10'}.items():
             farmer.fill('#decision-' + key, value)
@@ -152,6 +187,7 @@ def run_checks(base, executable, artifacts):
         expect(farmer.locator('#sales-result')).to_contain_text('₹6,000.00')
         expect(farmer.locator('#sales-result')).to_contain_text('₹4,800.00')
         farmer.screenshot(path=str(artifacts / 'selling-decision-mobile.png'), full_page=True)
+        visit(farmer, '/farm-decisions?tool=water')
         for key, value in {'area_value':'1000','depth_mm':'10','efficiency_percent':'50','pump_lpm':'100'}.items():
             farmer.fill('#decision-' + key, value)
         farmer.select_option('#decision-area_unit', 'm2')
@@ -170,15 +206,18 @@ def run_checks(base, executable, artifacts):
         expect(farmer.get_by_text('Browser organic tomatoes', exact=True)).to_be_visible()
         visit(farmer, '/farm-tools')
         farmer.fill('#task-title', 'Check drip irrigation')
+        farmer.locator('#task-extra > summary').click()
         farmer.fill('#task-crop', 'Tomato field')
         farmer.locator('form[action="/farm-tools/tasks"] button[type="submit"]').click()
         expect(farmer.get_by_text('Check drip irrigation', exact=True)).to_be_visible()
         farmer.locator('li').filter(has=farmer.get_by_text('Check drip irrigation', exact=True)).locator('[data-i18n="farm_mark_done"]').click()
         expect(farmer.locator('[data-i18n="farm_done"]')).to_be_visible()
+        visit(farmer, '/farm-tools?view=money')
         for kind, amount in [('expense','150.25'), ('income','500.50')]:
             farmer.select_option('#entry-kind', kind)
             farmer.fill('#entry-amount', amount)
             farmer.select_option('#entry-category', 'seeds' if kind == 'expense' else 'produce_sale')
+            farmer.locator('#entry-extra > summary').click()
             farmer.fill('#entry-note', 'Browser ' + kind)
             farmer.locator('form[action="/farm-tools/ledger"] button[type="submit"]').click()
         expect(farmer.get_by_text('₹350.25', exact=True)).to_be_visible()
@@ -191,9 +230,9 @@ def run_checks(base, executable, artifacts):
             farmer.set_viewport_size({'width':width, 'height':900})
             for path in ('/my-farm','/farm-decisions','/farm-tools','/auth/farmer/dashboard','/marketplace/my-products','/orders/farmer','/crop/','/disease/','/weather/','/chatbot/','/analytics/'):
                 visit(farmer, path)
-        visit(farmer, '/farm-tools')
+        visit(farmer, '/farm-tools?view=money')
         farmer.locator('[data-lang="mr"]').click()
-        expect(farmer.locator('[data-i18n="farm_title"]')).to_have_text('माझ्या शेतीचे नियोजन')
+        expect(farmer.locator('[data-i18n="farm_money_title"]')).to_contain_text('हिशेब')
         farmer.screenshot(path=str(artifacts / 'planner-mobile-marathi.png'), full_page=True)
         farmer.locator('[data-lang="en"]').click()
         visit(farmer, '/crop/')
@@ -221,6 +260,7 @@ def run_checks(base, executable, artifacts):
 
         buyer = new_page(mobile=True)
         register(buyer, 'buyer@browser.example', 'buyer')
+        expect(buyer.locator('[data-i18n="daily_buy"]')).to_be_visible()
         visit(buyer, '/marketplace/')
         form = buyer.locator('form[action^="/cart/add/"]').first
         form.locator('select[name="quantity"]').select_option('2')
@@ -250,12 +290,20 @@ def run_checks(base, executable, artifacts):
             visit(buyer, '/orders/my')
             assert buyer.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
         buyer.screenshot(path=str(artifacts / 'buyer-order-mobile.png'), full_page=True)
+        private_response = buyer.goto(base + credit_path, wait_until='networkidle')
+        assert private_response.status == 403
+        nojs = new_page(mobile=True, javascript=False)
+        visit(nojs, '/farm-help?problem=water')
+        nojs.check('#help-moisture-wet')
+        nojs.check('#help-waterlogging-1')
+        nojs.locator('#help-form button[type="submit"]').click()
+        expect(nojs.locator('#help-result')).to_have_attribute('data-step','waterlogging')
         assert not errors, f'Browser script errors: {errors}'
         assert not asset_errors, f'Missing assets: {asset_errors}'
         for context in contexts:
             context.close()
         browser.close()
-    print('Browser checks passed: responsive pages at 320/390/1440px, EN/HI/MR persistence, real-CSRF accounts, field advice + local case ML, drafts, action tasks, outcomes/PDF, selling/water calculations, planner/CSV, crop demo, safe chat + retry, buyer checkout → delivery → rating, exact stock, local assets.')
+    print('Browser checks passed: simple daily pages at 320/390/1440px, EN/HI/MR persistence, anonymous common-problem help with and without JavaScript, real-CSRF accounts, private credit/partial payments/statement, field advice + local case ML, drafts, action tasks, outcomes/PDF, separate selling/water and work/money forms, planner/CSV, crop demo, safe chat + retry, buyer checkout → delivery → rating, exact stock, local assets.')
     print('Screenshots:', artifacts)
 
 

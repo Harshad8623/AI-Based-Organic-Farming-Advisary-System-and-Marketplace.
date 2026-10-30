@@ -33,6 +33,10 @@ The new field profiles, observation snapshots, reported outcomes and task links 
 
 These changes do not restore a deleted Render database. The web service still needs an Available PostgreSQL service and its current connection URL in `DATABASE_URL`. If the former database was deleted, restore from backup where available or configure a replacement in the same Render workspace/region; new tables alone cannot recover old records.
 
+## Daily help and credit records
+
+Account-free `/farm-help` needs no provider credentials. Private `credit_accounts` and `credit_payments` are new additive tables initialized with the app. Settlement and mistaken-entry cancellation use guarded database writes; keep the database persistent and backed up. They do not automatically modify the farm diary or send reminders to contacts. Run the real PostgreSQL check before release to verify these financial records on the deployment database engine.
+
 ## Agricultural information
 
 The crop explorer uses generated training examples and has no established field accuracy. Keep its educational label. Never replace it with a crop, yield or fertilizer guarantee without validated data, units and agronomic evaluation.

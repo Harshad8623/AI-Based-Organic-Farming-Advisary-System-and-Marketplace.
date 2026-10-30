@@ -1,6 +1,22 @@
 /* Field checks, stored explanations and farmer records work without translation APIs. */
 (() => {
   const copy = {
+    adf_just_basics:['Name the field, choose the crop and water method. Other details can wait.','खेत का नाम, फसल और पानी का तरीका चुनें। बाकी जानकारी बाद में जोड़ सकते हैं।','शेताचे नाव, पीक आणि पाण्याची पद्धत निवडा. बाकी माहिती नंतर जोडता येईल.'],
+    adf_choose_water:['Choose your water method','पानी का तरीका चुनें','पाण्याची पद्धत निवडा'],
+    adf_more_field_details:['Add more field details (optional)','खेत की और जानकारी (वैकल्पिक)','शेताची अधिक माहिती (ऐच्छिक)'],
+    adf_field_details:['Field details','खेत की जानकारी','शेताची माहिती'],
+    adf_water_and_soil:['1. Water and soil','1. पानी और मिट्टी','१. पाणी आणि माती'],
+    adf_plants_and_pests:['2. Plants and insects','2. पौधे और कीट','२. झाडे आणि किडी'],
+    adf_field_options:['More field options','खेत के अन्य विकल्प','शेताचे इतर पर्याय'],
+    adf_pick_field:["Choose a field for today's check.",'आज की जाँच के लिए खेत चुनें।','आजच्या पाहणीसाठी शेत निवडा.'],
+    adf_simple_start:['Add a field once. Keep short checks as the season goes on.','खेत एक बार जोड़ें। मौसम के साथ छोटी जाँच दर्ज करते रहें।','शेत एकदा जोडा. हंगामभर छोटी पाहणी नोंदवत राहा.'],
+    adf_private_short:['Only you can see your field records.','आपके खेत की नोंदें केवल आपको दिखती हैं।','तुमच्या शेताच्या नोंदी फक्त तुम्हालाच दिसतात.'],
+    adf_first_step:['Start here','पहले यह करें','आधी हे करा'],
+    adf_past_steps:['Previously suggested checks','पहले सुझाई गई जाँचें','मागे सुचवलेल्या तपासण्या'],
+    adf_followup_short:['How is the field now?','खेत की हालत अब कैसी है?','आता शेताची स्थिती कशी आहे?'],
+    adf_followup_simple:['After your next check, record what changed.','अगली जाँच के बाद बदलाव दर्ज करें।','पुढच्या पाहणीनंतर काय बदलले ते नोंदवा.'],
+    adf_about_this_advice:['About this advice and your notes','इस सलाह के बारे में और आपकी नोंद','या सल्ल्याबद्दल आणि तुमच्या नोंदी'],
+    adf_advice_limit:['These are checks based on your observations, not a confirmed disease diagnosis.','यह आपकी जानकारी पर आधारित जाँच है, रोग का पक्का निदान नहीं।','ही तुमच्या पाहणीनुसार सुचवलेली तपासणी आहे; रोगाचे निश्चित निदान नाही.'],
     adf_previous_suggestions:['Checks suggested at that time; completion is not verified.','उस समय सुझाई गई जाँचें; उनके किए जाने की पुष्टि नहीं है।','त्या वेळी सुचवलेल्या तपासण्या; त्या केल्या याची खात्री नाही.'],
     adf_stale_report:['This is a past plan or the field details changed. Record a fresh check before adding its actions.','यह पुरानी योजना है या खेत की जानकारी बदली है। काम जोड़ने से पहले नई जाँच करें।','हे जुने नियोजन आहे किंवा शेताची माहिती बदलली आहे. कामे जोडण्यापूर्वी नवीन पाहणी नोंदवा.'],
     adf_fresh_check:['Record a fresh field check','नई खेत जाँच करें','नवीन शेतपाहणी नोंदवा'],
@@ -34,7 +50,7 @@
     adf_archive_notice:['This field is archived. Past reports remain available.','यह खेत पुरानी नोंद में है। पहले की रिपोर्ट उपलब्ध हैं।','हे शेत संग्रहित आहे. मागील अहवाल उपलब्ध आहेत.'],
     adf_restore_field:['Make field active','खेत फिर चालू करें','शेत पुन्हा सक्रिय करा'],
     adf_today_check:['What did you notice today?','आज खेत में क्या दिखा?','आज काय दिसले?'],
-    adf_observation_hint:['Check different parts of the field. Unknown is better than a guess.','खेत के अलग हिस्से देखें। अंदाज़े के बजाय अज्ञात चुनें।','शेताच्या वेगवेगळ्या भागांत पाहणी करा. अंदाज करण्याऐवजी माहीत नाही निवडा.'],
+    adf_observation_hint:['Check different parts of the field. Choose only what you saw.','खेत के अलग हिस्से देखें। जो देखा वही चुनें।','शेताच्या वेगवेगळ्या भागांत पाहा. प्रत्यक्ष दिसले तेच निवडा.'],
     adf_moisture:['Soil near the roots','जड़ों के पास की मिट्टी','मुळांजवळची माती'],
     adf_moisture_unknown:['Not checked / unsure','नहीं जाँची / पता नहीं','तपासली नाही / माहीत नाही'],
     adf_moisture_dry:['Dry','सूखी','कोरडी'], adf_moisture_balanced:['Moist, not soggy','नम, पानी नहीं भरा','ओलसर, पण चिखल नाही'], adf_moisture_wet:['Wet / saturated','बहुत गीली','खूप ओली / पाण्याने भरलेली'],
@@ -49,7 +65,7 @@
     adf_recent_rain:['Measured rain in the last 24 hours (mm)','पिछले 24 घंटे में मापी बारिश (mm)','मागील 24 तासांत मोजलेला पाऊस (mm)'],
     adf_counts_hint:['Enter both plant counts, or leave both blank. Enter rain only if measured; blank means unknown.','पौधों की दोनों संख्या भरें या दोनों खाली छोड़ें। मापी बारिश ही लिखें; खाली का अर्थ अज्ञात है।','झाडांच्या दोन्ही संख्या भरा किंवा दोन्ही रिकाम्या ठेवा. पाऊस मोजला असेल तरच लिहा; रिकामे म्हणजे माहीत नाही.'],
     adf_notes:['Anything else? (optional)','और कुछ? (वैकल्पिक)','आणखी काही? (ऐच्छिक)'],
-    adf_get_advice:['Save check and see next steps','जाँच सहेजें और अगले काम देखें','पाहणी जतन करा आणि पुढची कामे पाहा'],
+    adf_get_advice:['See what to do next','अगला काम देखें','पुढे काय करायचे ते पाहा'],
     adf_history:['Previous field checks','पिछली खेत जाँच','मागील शेतपाहण्या'], adf_open_report:['Open plan →','काम देखें →','नियोजन पाहा →'],
     adf_previous:['Previous','पिछला','मागील'], adf_next:['Next','अगला','पुढील'],
     adf_archive_field:['Archive field','खेत संग्रहित करें','शेत संग्रहित करा'],
@@ -71,7 +87,7 @@
     adf_review_today:['Check this field again today.','इस खेत को आज फिर देखें।','या शेताची आजच पुन्हा पाहणी करा.'],
     adf_worsening_note:['If conditions worsen, contact your local KVK or extension officer sooner.','स्थिति बिगड़े तो स्थानीय कृषि विज्ञान केंद्र या अधिकारी से जल्दी संपर्क करें।','परिस्थिती बिघडल्यास स्थानिक कृषी विज्ञान केंद्र किंवा अधिकाऱ्याशी लवकर संपर्क करा.'],
     adf_cases_title:['From your previous field checks','आपकी पिछली खेत जाँच से','तुमच्या मागील शेतपाहण्यांमधून'],
-    adf_cases_note:['Local similarity matching finds your recorded cases; reported improvement does not prove an action caused it.','मिलती-जुलती परिस्थितियाँ आपकी नोंदों से मिलती हैं। सुधार दिखने से उपचार का असर साबित नहीं होता।','स्थानिक साम्य शोधातून तुमच्याच जुन्या नोंदी मिळतात. सुधारणा दिसणे म्हणजे एखाद्या उपायामुळेच ती झाली याचा पुरावा नाही.'],
+    adf_cases_note:['Your past observations; a reported improvement does not prove a treatment worked.','आपकी पिछली जाँचें; सुधार दिखना उपचार का प्रमाण नहीं है।','तुमच्या मागील पाहण्या; सुधारणा नोंदवणे म्हणजे उपचाराचा परिणाम सिद्ध होत नाही.'],
     adf_cases_empty:['No sufficiently similar checks yet. Your own history will build this section.','अभी पर्याप्त मिलती-जुलती जाँच नहीं है। आपकी नोंदों से यह भाग बनेगा।','पुरेशा समान पाहण्या अजून नाहीत. तुमच्या नोंदींमधून हा भाग तयार होईल.'],
     adf_followup_title:['What happened after your next field check?','अगली जाँच के बाद क्या हुआ?','पुढच्या पाहणीनंतर काय झाले?'],
     adf_followup_note:['Record what you actually saw after acting or checking again. This is your report, not a verified treatment result.','काम या अगली जाँच के बाद वास्तव में क्या दिखा वह लिखें। यह आपका बताया परिणाम है, प्रमाणित उपचार परिणाम नहीं।','काम केल्यानंतर किंवा पुन्हा तपासल्यानंतर प्रत्यक्ष काय दिसले ते नोंदवा. हा तुमचा अनुभव आहे, पडताळलेला उपचार परिणाम नाही.'],
@@ -116,6 +132,15 @@
   function ready() {
     apply(); I18n.onLangChange(apply);
     document.querySelectorAll('[data-adf-print]').forEach(button => button.addEventListener('click',()=>window.print()));
+    let closedBeforePrint=[];
+    window.addEventListener('beforeprint',()=>{
+      closedBeforePrint=Array.from(document.querySelectorAll('details[data-adf-print-open]')).filter(details=>!details.open);
+      closedBeforePrint.forEach(details=>{details.open=true;});
+    });
+    window.addEventListener('afterprint',()=>{
+      closedBeforePrint.forEach(details=>{details.open=false;});
+      closedBeforePrint=[];
+    });
     document.querySelectorAll('[data-adf-confirm]').forEach(form => form.addEventListener('submit',event => {
       if (!window.confirm(I18n.t(form.dataset.adfConfirm))) event.preventDefault();
     }));

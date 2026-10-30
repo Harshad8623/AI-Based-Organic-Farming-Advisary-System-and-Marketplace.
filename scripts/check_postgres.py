@@ -24,6 +24,7 @@ from config import normalize_database_url
 from database.seed import seed_roadmaps
 from farm_tools_models import FarmLedgerEntry, FarmTask
 from advisory_models import FarmField, FieldObservation, AdvisoryFollowup, AdvisoryTaskLink
+from credit_models import CreditAccount, CreditPayment
 from models import db, User, Product, Order, CheckoutAttempt, CropRoadmap
 
 
@@ -162,7 +163,50 @@ def main():
                 'farmgate_price':'18','farmgate_price_unit':'kg','market_price':'22',
                 'market_price_unit':'kg','transport_cost':'3000','market_fees':'0','spoilage_percent':'10'})
             assert economics.status_code == 200 and b'6,000.00' in economics.data and b'4,800.00' in economics.data
-            print('PostgreSQL 16 checks passed: startup/schema, guides, accounts, orders/receipts/stock, ledger/CSV, field JSON snapshots, action/task links, outcomes, local ML cases, and cost calculations.')
+            # Common-problem help works without an account or external provider.
+            public = application.test_client()
+            help_response = public.post('/farm-help', data={'problem':'water',
+                'moisture':'wet','waterlogging':'1'})
+            assert help_response.status_code == 200 and b'data-step="waterlogging"' in help_response.data
+            assert farmer.get('/credit-book').status_code == 200
+            with farmer.session_transaction() as session:
+                credit_token = session['credit_account_token']
+            created = farmer.post('/credit-book/accounts',data={'submission_id':credit_token,
+                'direction':'receive','contact_name':'Test produce trader','amount':'१०००.५०',
+                'entry_date':today,'due_date':today})
+            assert created.status_code == 303
+            credit_id = int(created.location.rsplit('/',1)[1])
+            farmer.get(created.location)
+            with farmer.session_transaction() as session:
+                payment_token = session['credit_payment_token']
+            payment = {'submission_id':payment_token,'amount':'२००.२५','entry_date':today}
+            payment_path = f'/credit-book/accounts/{credit_id}/payments'
+            assert farmer.post(payment_path,data=payment).status_code == 303
+            assert farmer.post(payment_path,data=payment).status_code == 303
+            with application.app_context():
+                credit = db.session.get(CreditAccount,credit_id)
+                assert credit.remaining == Decimal('800.25')
+                assert CreditPayment.query.count() == 1
+                assert FarmLedgerEntry.query.count() == 2
+            farmer.get(created.location)
+            with farmer.session_transaction() as session:
+                next_payment = session['credit_payment_token']
+            assert farmer.post(payment_path,data=payment | {'submission_id':next_payment,'amount':'801'}).status_code == 400
+            assert b'800.25' in farmer.get('/auth/farmer/dashboard').data
+            assert buyer.get(created.location).status_code == 403
+            farmer.get('/credit-book')
+            with farmer.session_transaction() as session:
+                wrong_token = session['credit_account_token']
+            mistaken = farmer.post('/credit-book/accounts',data={'submission_id':wrong_token,
+                'direction':'pay','contact_name':'Mistaken test entry','amount':'100','entry_date':today})
+            assert mistaken.status_code == 303
+            wrong_id = int(mistaken.location.rsplit('/',1)[1])
+            assert farmer.post(f'/credit-book/accounts/{wrong_id}/void',data={'void_reason':'Entered twice by mistake'}).status_code == 303
+            with application.app_context():
+                voided = db.session.get(CreditAccount,wrong_id)
+                assert voided.voided and voided.remaining == 0
+                assert CreditPayment.query.count() == 1
+            print('PostgreSQL 16 checks passed: startup/schema, guides, accounts, orders/receipts/stock, ledger/CSV, field JSON snapshots, action/task links, outcomes, local ML, calculations, account-free help, exact credit settlements/retries, and mistaken-entry correction.')
     finally:
         if application:
             with application.app_context():

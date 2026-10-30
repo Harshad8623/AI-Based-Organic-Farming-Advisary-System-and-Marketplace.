@@ -123,8 +123,11 @@ def create_app(test_config=None):
     from routes.farm_tools         import farm_tools_bp
     from routes.farm_advisory      import farm_advisory_bp
     from routes.farm_decisions     import farm_decisions_bp
+    from routes.farm_help          import farm_help_bp
+    from routes.credit_book        import credit_book_bp
     import farm_tools_models  # Register additive planner tables before create_all.
     import advisory_models  # Field contexts, observations, outcomes and action links.
+    import credit_models  # Private credit accounts and partial-payment events.
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(marketplace_bp)
@@ -140,6 +143,8 @@ def create_app(test_config=None):
     app.register_blueprint(farm_tools_bp)
     app.register_blueprint(farm_advisory_bp)
     app.register_blueprint(farm_decisions_bp)
+    app.register_blueprint(farm_help_bp)
+    app.register_blueprint(credit_book_bp)
 
     # -----------------------------------------------------------------------
     # Home Route

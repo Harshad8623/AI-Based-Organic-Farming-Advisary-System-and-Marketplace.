@@ -231,6 +231,7 @@ function run(storage) {
   };
   const context = vm.createContext({document, window: {addEventListener() {}}, localStorage: storage});
   vm.runInContext(source, context);
+  vm.runInContext(fs.readFileSync('static/js/daily-ui-i18n.js', 'utf8'), context);
   return {document, label, unknown, field, buttons, context};
 }
 const blocked = run({getItem() {throw Error('blocked');}, setItem() {throw Error('blocked');}});

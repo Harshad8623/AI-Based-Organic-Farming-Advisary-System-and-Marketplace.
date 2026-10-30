@@ -11,6 +11,9 @@
       navigation.classList.toggle('is-open', open);
       toggle?.setAttribute('aria-expanded', String(open));
       moreLinks.forEach(link => link.setAttribute('aria-expanded', String(open)));
+      if (open && window.matchMedia('(max-width:1050px)').matches) {
+        navigation.querySelectorAll('.tools-menu').forEach(menu => { menu.open = true; });
+      }
     }
     toggle?.addEventListener('click', () => setNavigation(toggle.getAttribute('aria-expanded') !== 'true'));
     moreLinks.forEach(link => link.addEventListener('click', event => {
@@ -28,9 +31,11 @@
       }
     });
     document.addEventListener('click', event => {
-      document.querySelectorAll('.tools-menu[open]').forEach(menu => {
-        if (!menu.contains(event.target)) menu.removeAttribute('open');
-      });
+      if (!event.target.closest('[data-open-navigation], .mobile-menu-toggle')) {
+        document.querySelectorAll('.tools-menu[open]').forEach(menu => {
+          if (!menu.contains(event.target)) menu.removeAttribute('open');
+        });
+      }
       if (!window.bootstrap && event.target.closest('[data-bs-dismiss="alert"]')) event.target.closest('.alert')?.remove();
     });
     const notice = document.getElementById('connection-notice');
@@ -50,8 +55,18 @@
         element.textContent = formatter.format(localDay);
       });
     }
+    function localizeSavedLabels() {
+      const lang = typeof I18n === 'undefined' ? 'en' : I18n.getLang();
+      document.querySelectorAll('[data-daily-localized]').forEach(element => {
+        try {
+          const labels = JSON.parse(element.getAttribute('data-daily-localized'));
+          if (typeof labels[lang] === 'string') element.textContent = labels[lang];
+        } catch (_) {}
+      });
+    }
     localizeCalendarDates();
-    if (typeof I18n !== 'undefined') I18n.onLangChange(localizeCalendarDates);
+    localizeSavedLabels();
+    if (typeof I18n !== 'undefined') I18n.onLangChange(() => { localizeCalendarDates(); localizeSavedLabels(); });
 
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready);

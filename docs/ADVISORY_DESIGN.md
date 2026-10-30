@@ -1,6 +1,12 @@
 # Field-based advisory and personal case learning
 
-The primary workflow is **My farm → record a field check → read explained priorities → save work → record what happened**. Chat and image services are optional supporting tools. The crop model demonstration is kept separate from farm decisions.
+The home screen starts with daily problems: watering, crop trouble, writing a cost or sale, money owed, and selling prices. The saved field workflow remains **My farm → record a field check → read explained priorities → save work → record what happened**. Chat and image services are optional supporting tools. The crop model demonstration is kept separate from farm decisions.
+
+## Help before creating an account
+
+`/farm-help` asks a short set of questions for water, leaf symptoms or visible pests. It uses the same observation engine with unknown field context and shows one relevant action first. Unchecked standing water cannot be treated as a confirmed absence to suggest watering. Known urgent observations still take priority over the selected problem. Results show what remains to be checked and provide a local agricultural support contact.
+
+Answers are not saved, and no API, model download or account is required. A farmer can move to their saved fields when they want a history. Forms submit normally without JavaScript; extra report checks and optional field details use native disclosure controls.
 
 ## What the intelligence does
 
@@ -42,6 +48,12 @@ Form submissions and action-to-task links are repeat-safe. Fields can be archive
 - Water volume uses 1 mm over 1 m² = 1 litre, then the entered application efficiency and pump flow. The app does not decide the irrigation depth.
 
 Costs can explicitly use all the current farmer's expense entries for one selected month. Those records are not automatically specific to a crop or field. Calculations do not silently create ledger income or expenses. Decimal arithmetic, unit conversion, zero and boundary cases are tested.
+
+## Everyday money owed
+
+The private credit book records amounts a trader/buyer owes the farmer and amounts the farmer owes a worker/supplier. Balances use integer paise. A partial payment atomically reserves only the remaining amount and records an immutable payment event in the same transaction. Unique submission tokens make retries safe; a token reused from another account tab produces a correctable error, not a second settlement or server error.
+
+A mistaken unpaid entry can be cancelled with a reason. Its original amount and timestamp remain available; cancellation never creates a payment. Payments and cancellation compete on the same guarded database row so they cannot both succeed. Once a payment exists, the entry cannot be cancelled. Due balances appear on the farmer's own home screen, and full CSV statements escape spreadsheet formulas. These records do not automatically enter the income/expense diary, count loans as profit, or send anyone a message.
 
 ## Verification and limits
 
