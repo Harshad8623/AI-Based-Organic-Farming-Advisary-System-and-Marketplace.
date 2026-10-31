@@ -2,7 +2,7 @@
 
 A Flask application for everyday farm work, with English, Hindi and Marathi controls. The home screen starts with five tasks: check watering, investigate a crop problem, record a cost or sale, track money owed, and compare selling prices. The project was previously called KrishiAI.
 
-**Made by Harshad Madhav Dhuppe · PRN 23025331844046 · CSMSS Chh. Shahu College of Engineering Sambhajinagar · Electronics and Computer Engineering.**
+**Made by Harshad Madhav Dhuppe · CSMSS Chh. Shahu College of Engineering Sambhajinagar · Electronics and Computer Engineering.**
 
 ## Features
 
